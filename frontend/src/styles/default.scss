@@ -1,0 +1,138 @@
+@use 'sass:color';
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
+@import url('https://fonts.googleapis.com/icon?family=Material+Icons');
+
+$BG_COLOR: #1e1e1e;
+$TEXT_COLOR: #cccccc;
+$FONT: 'Playfair Display', serif;
+
+html {
+    background-color: $BG_COLOR;
+
+    body {
+        color: $TEXT_COLOR;
+        font-family: $FONT;
+        text-align: center;
+        font-weight: 400;
+        margin: 0 auto;
+        padding: 0;
+        overflow-x: hidden;
+        max-width: 900px;
+    }
+}
+
+#background {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    z-index: -1;
+    .dot {
+        position: absolute;
+        width: 6px;
+        height: 6px;
+        background: radial-gradient(circle, $TEXT_COLOR 0%, transparent 100%);
+        border-radius: 50%;
+        opacity: 0.7;
+    }
+}
+
+nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 60px;
+    background-color: rgba($BG_COLOR, 0.98);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    z-index: 10;
+    .nav-wrapper {
+        max-width: 900px;
+        margin: 0 auto;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 24px;
+    }
+    .brand-logo {
+        color: $TEXT_COLOR;
+        font-family: $FONT;
+        font-size: 1.7rem;
+        font-weight: 700;
+        letter-spacing: 2px;
+        text-decoration: none;
+        transition: color 0.2s;
+        &:hover {
+            color: color.adjust($TEXT_COLOR, $lightness: 15%);
+        }
+    }
+    ul {
+        display: flex;
+        align-items: center;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        li {
+            margin-left: 28px;
+            a {
+                color: $TEXT_COLOR;
+                font-size: 1.1rem;
+                text-decoration: none;
+                font-weight: 500;
+                padding: 6px 10px;
+                border-radius: 4px;
+                transition: background 0.2s, color 0.2s;
+                &:hover {
+                    background: rgba(255, 255, 255, 0.08);
+                    color: color.adjust($TEXT_COLOR, $lightness: 15%);
+                }
+            }
+        }
+    }
+    @media (max-width: 600px) {
+        .nav-wrapper {
+            flex-direction: column;
+            align-items: flex-start;
+            padding: 0 10px;
+        }
+        .brand-logo {
+            font-size: 1.2rem;
+            margin-bottom: 6px;
+        }
+        ul {
+            flex-direction: column;
+            width: 100%;
+            position: fixed;
+            top: 60px;
+            left: 0;
+            width: 100vw;
+            li {
+                background-color: #1e1e1e;
+                padding: 5px 20px;
+                width: 100%;
+            }
+        }
+    }
+    #hamburger-button {
+        display: none;
+        cursor: pointer;
+        position: fixed;
+        top: 12px;
+        right: 20px;
+        color: white;
+        @media (max-width: 600px) {
+            display: block;
+        }
+        i.material-icons {
+            font-size: 36px;
+            transition: transform 0.3s;
+        }
+    }
+}
+
+main {
+    margin-top: 70px;
+}

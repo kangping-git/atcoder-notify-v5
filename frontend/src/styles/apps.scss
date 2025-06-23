@@ -1,0 +1,51 @@
+$BG_COLOR: #1e1e1e;
+$TEXT_COLOR: #cccccc;
+$FONT: 'Playfair Display', serif;
+
+#main_container {
+    margin-top: 70px;
+}
+h1 {
+    font-size: 40pt;
+    margin: 0;
+    padding-bottom: 20px;
+    opacity: 0;
+}
+p {
+    font-size: 25px;
+    margin: 0;
+    padding-bottom: 20px;
+    opacity: 0;
+}
+.app-list {
+    a {
+        text-decoration: none;
+    }
+    .app-container {
+        width: 100%;
+        height: auto;
+        margin-bottom: 20px;
+        padding: 20px;
+        background-color: rgba(255, 255, 255, 0.05);
+        border-radius: 10px;
+        box-shadow: rgba(0, 0, 0, 0.1) 0px 4px 12px;
+
+        h3 {
+            font-size: 24pt;
+            margin-bottom: 10px;
+            color: $TEXT_COLOR;
+            text-decoration: none;
+        }
+
+        p {
+            font-size: 14pt;
+            color: $TEXT_COLOR;
+            opacity: 1;
+        }
+        transition: background-color 0.3s, box-shadow 0.3s;
+    }
+    .app-container:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+        box-shadow: rgba(0, 0, 0, 0.2) 0px 6px 16px;
+    }
+}

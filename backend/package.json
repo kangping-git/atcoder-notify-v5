@@ -1,0 +1,8 @@
+{
+    "scripts": {
+        "build:web": "cd web && npm run build",
+        "build:web:watch": "cd web && npm run build:watch",
+        "build": "concurrently \"npm run build:web\"",
+        "build:watch": "concurrently \"npm run build:web:watch\""
+    }
+}

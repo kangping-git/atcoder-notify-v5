@@ -1,0 +1,186 @@
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+enum SubmissionStatus {
+  AC
+  WA
+  TLE
+  MLE
+  RE
+  CE
+  QLE
+  OLE
+  IE
+  WJ
+  WR
+}
+enum contestType {
+  ABC
+  ARC
+  AGC
+  Unknown
+}
+
+model ApiKey {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique
+  admin     Boolean  @default(false)
+  rateLimit Int      @default(1000) 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt @default(now())
+}
+
+model config {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique
+  value     String   @db.LongText
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt @default(now())
+}
+model submissions {
+  submissionId BigInt @id
+  status       SubmissionStatus
+  contestId    String
+  contest      Contest @relation(fields: [contestId], references: [id])
+  problemId    String
+  datetime     DateTime
+  userId       String
+  user         User @relation(fields: [userId], references: [name])
+  language     String
+  score        Float
+  codeLength   Int
+  time         Int   @default(-1)
+  memory       Int   @default(-1)
+
+  @@index([userId], name: "userId")
+  @@index([datetime], name: "datetime")
+  @@index([status], name: "status")
+  @@index([language], name: "language")
+  @@index([score], name: "score")
+  @@index([time], name: "time")
+  @@index([memory], name: "memory")
+  @@index([codeLength], name: "codeLength")
+  @@index([contestId], name: "contestId")
+  @@index([problemId], name: "problemId")
+}
+model Contest {
+  id                String   @id
+  title             String
+  ratingRangeBegin  Int
+  ratingRangeEnd    Int
+
+  isHeuristic       Boolean @default(false)
+  contestType       contestType
+
+  lastSubmissionCrawlTime  DateTime?
+  submissions       submissions[]
+  users             User[]
+
+  startTime         DateTime
+  endTime           DateTime
+  duration          Int
+
+  resultPageHash    String?
+  ratingChangeEvent userRatingChangeEvent[]
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt @default(now())
+}
+model User {
+  id              Int   @id @default(autoincrement())
+  name            String   @unique
+  algoRating      Int @default(0)
+  heuristicRating Int @default(0)
+  algoAPerf       Float?
+  heuristicAPerf  Float?
+  country         String  @default("Unknown")
+  lastContestTime DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt @default(now())
+
+  submissions submissions[]
+  contests    Contest[]
+  ratings    userRatingChangeEvent[]
+}
+model userRatingChangeEvent {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  oldRating    Int
+  newRating    Int
+  performance  Int
+  InnerPerformance Int
+  isHeuristic Boolean @default(false)
+  contestId String
+  contest   Contest @relation(fields: [contestId], references: [id])
+  place Int @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt @default(now())
+}
+
+model KickyInviteCode {
+  id        Int      @id @default(autoincrement())
+  code      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt @default(now())
+}
+model KickyUser {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+
+  password  String
+  salt      String
+  email     String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt @default(now())
+  
+  sessionData SessionData[]
+  submissions KickyJudgeSubmission[]
+}
+model KickyJudgeContest {
+  id        String   @id
+  title     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt @default(now())
+  tasks     KickyJudgeTask[]
+}
+model KickyJudgeTask {
+  id        String   @id
+  title     String
+  contestId String
+  contest   KickyJudgeContest @relation(fields: [contestId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt @default(now())
+  submissions KickyJudgeSubmission[]
+}
+model KickyJudgeSubmission {
+  id        String   @id
+  taskId    String
+  task      KickyJudgeTask @relation(fields: [taskId], references: [id])
+  userId    String
+  user      KickyUser @relation(fields: [userId], references: [name])
+  status    SubmissionStatus
+  datetime  DateTime
+  language  String
+  score     Float
+  codeLength Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt @default(now())
+}
+model SessionData {
+  id          Int    @default(autoincrement()) @id
+  sid         String @unique
+  userId      Int?
+  user        KickyUser?  @relation(fields: [userId], references: [id])
+
+  expiresAt   DateTime
+}

@@ -1,0 +1,17 @@
+{
+    "run_command": ["/opt/judge/submission/main"],
+    "filename": "main.cpp",
+    "is_interpreter": true,
+    "build_command": [
+        "g++",
+        "-DEVAL",
+        "-std=gnu++17",
+        "-O3",
+        "-pipe",
+        "-static",
+        "-s",
+        "-o",
+        "/opt/judge/submission/main",
+        "/opt/judge/submission/main.cpp"
+    ]
+}

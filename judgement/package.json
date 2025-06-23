@@ -1,0 +1,13 @@
+{
+    "scripts": {
+        "build:judge_server": "cd ./judge/ & tsc",
+        "start:judge_server": "node judge/dist/index.js",
+        "build:watch:judge_server": "cd ./judge/ & tsc -w",
+        "build:judge_worker": "cd ./worker/ & tsc",
+        "start:judge_worker": "node worker/dist/index.js",
+        "build:watch:judge_worker": "cd ./worker/ & tsc -w",
+        "build": "concurrently \"npm run build:judge_server\" \"npm run build:judge_worker\"",
+        "start": "concurrently \"npm run start:judge_server\" \"npm run start:judge_worker\"",
+        "build:watch": "concurrently \"npm run build:watch:judge_server\" \"npm run build:watch:judge_worker\""
+    }
+}

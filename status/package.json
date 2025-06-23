@@ -1,0 +1,11 @@
+{
+    "name": "atcoder_notify_status",
+    "version": "0.0.0",
+    "description": "kyo-pro.club上のステータスを確認",
+    "main": "dist/index.js",
+    "scripts": {
+        "start": "node dist/index.js"
+    },
+    "author": "Kicky1618",
+    "license": "MIT"
+}

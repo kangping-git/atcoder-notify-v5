@@ -1,0 +1,88 @@
+@use './default.scss';
+$BG_COLOR: #1e1e1e;
+$TEXT_COLOR: #cccccc;
+$FONT: 'Playfair Display', serif;
+
+.error-message {
+    background-color: rgb(255, 117, 117);
+    border: rgb(255, 54, 54) solid 1px;
+    padding: 5px 30px;
+    border-radius: 5px;
+    font-size: 14px;
+    margin-top: 10px;
+    text-align: center;
+    color: black;
+}
+#login-form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: rgb(175, 175, 175) solid 1px;
+    background-color: rgba($color: #fff, $alpha: 0.02);
+    margin-top: 100px;
+    backdrop-filter: blur(2px);
+    border-radius: 10px;
+    box-shadow: #fff 0px 0px 5px 0px;
+    padding: 20px;
+    h1 {
+        font-size: 40pt;
+        margin: 0;
+        padding-bottom: 20px;
+        opacity: 0;
+    }
+}
+
+label {
+    font-size: 20px;
+    color: $TEXT_COLOR;
+    margin-bottom: 5px;
+    font-family: $FONT;
+}
+input {
+    border: 1px solid #ccc;
+    padding: 10px;
+    border-radius: 5px;
+    width: calc(100% - 22px);
+    margin-bottom: 10px;
+    font-size: 16px;
+    background: rgba(255, 255, 255, 0.05);
+    box-shadow: inset 0 2px 4px rgb(0, 0, 0);
+    color: $TEXT_COLOR;
+    transition: border-color 0.3s;
+}
+input:focus {
+    outline: none;
+    border-color: #4f39f6;
+}
+button {
+    background: linear-gradient(135deg, #494949, #747474);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+}
+#register_link,
+#login_link {
+    color: white;
+    text-decoration: underline;
+    font-size: 16px;
+    margin-top: 30px;
+}
+@media (max-width: 600px) {
+    #login-form {
+        width: 90vw;
+        max-width: 400px;
+        margin-left: auto;
+        margin-right: auto;
+        padding: 0 20px;
+    }
+}

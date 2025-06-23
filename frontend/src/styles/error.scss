@@ -1,0 +1,42 @@
+@use './default.scss';
+$BG_COLOR: #1e1e1e;
+$TEXT_COLOR: #cccccc;
+$FONT: 'Playfair Display', serif;
+html {
+    background-color: $BG_COLOR;
+    color: $TEXT_COLOR;
+    font-family: $FONT;
+}
+
+h1 {
+    font-size: 60pt;
+    margin: 0;
+    padding-bottom: 50px;
+    opacity: 0;
+    margin-top: 80px;
+}
+p {
+    font-size: 20pt;
+    margin: 0;
+    padding-bottom: 50px;
+    opacity: 0;
+}
+#teapot {
+    width: 240px;
+    height: 200px;
+    margin: 0 auto;
+    position: absolute;
+    background-color: $BG_COLOR;
+    z-index: 1000;
+    left: calc(50vw + 400px);
+    top: 620px;
+}
+#yuge {
+    width: 240px;
+    height: 180px;
+    margin: 0 auto;
+    position: absolute;
+    z-index: 1000;
+    left: calc(50vw + 400px);
+    top: 480px;
+}

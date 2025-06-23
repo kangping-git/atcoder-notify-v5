@@ -1,0 +1,10 @@
+import { gsap } from 'gsap';
+import { SplitText } from 'gsap/SplitText';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import './styles/homes.scss';
+gsap.registerPlugin(SplitText);
+gsap.registerPlugin(ScrollTrigger);
+import './scenes/scene1';
+import './scenes/scene2';
+import './scenes/scene3';
+import './default';

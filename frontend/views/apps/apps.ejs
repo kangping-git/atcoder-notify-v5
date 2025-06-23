@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Apps</title>
+        <script src="/static/apps.js"></script>
+    </head>
+    <body>
+        <%- include("../components/header.ejs") %>
+        <div id="background"></div>
+
+        <div id="main_container">
+            <h1>Apps</h1>
+            <p id="apps_detail">
+                Explore our applications designed to enhance your AtCoder experience.
+            </p>
+
+            <div class="app-list">
+                <a href="/apps/rating-simulator">
+                    <div class="app-container">
+                        <h3>AtCoder Rating Simulator</h3>
+                        <p>
+                            Visualize and predict your next AtCoder rating based on hypothetical
+                            performance values. This tool helps you understand how different
+                            performances can affect your future rating using an interactive graph.
+                        </p>
+                    </div>
+                </a>
+                <a href="/apps/devitation">
+                    <div class="app-container">
+                        <h3>AtCoder Deviation</h3>
+                        <p>
+                            Calculate your AtCoder deviation based on your contest performance. This
+                            tool provides insights into your competitive standing and helps you
+                            track your progress over time.
+                        </p>
+                    </div>
+                </a>
+                <a href="/apps/altcoder">
+                    <div class="app-container">
+                        <h3>AtCoder ABC/ARC/AGC Calculator</h3>
+                        <p>
+                            Estimate your current AtCoder rating as if you had only participated in
+                            ABC, ARC, or AGC contests. AltCoder simulates your alternate rating
+                            history to see how each contest series influences your standing.
+                        </p>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </body>
+</html>
