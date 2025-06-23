@@ -1,6 +1,6 @@
 import type { GraphFeature } from './GraphFeature';
 import type { BaseHistoryGraph } from '../baseHistoryGraph';
-import { Database } from '../../../database';
+import { Database } from '../../../../database';
 import { createSVGLine, createSVGText } from '../svgHelpers';
 import { submissions as SubmissionRecord } from '@prisma/client';
 
@@ -18,8 +18,7 @@ export class SubmissionGraphFeature implements GraphFeature {
         const getX = (t: number) => this.graph.getX(t);
         const submissionCount = submissions.length + 100;
         const submissionStep = submissionCount > 10000 ? 2000 : submissionCount > 5000 ? 1000 : 400;
-        const getY = (k: number) =>
-            this.graph.graphPos.y + this.graph.graphSize.height - (k / submissionCount) * this.graph.graphSize.height;
+        const getY = (k: number) => this.graph.graphPos.y + this.graph.graphSize.height - (k / submissionCount) * this.graph.graphSize.height;
 
         const gridLines: string[] = [];
         const labels: string[] = [];

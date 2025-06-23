@@ -8,6 +8,10 @@ import { AxiosError } from 'axios';
 
 let window = 3;
 let timeout = 1000;
+const submissionListeners = new Set<(sub: Submission) => void>();
+export function addSubmissionListener(listener: (sub: Submission) => void) {
+    submissionListeners.add(listener);
+}
 export async function CrawlAllSubmissions(contest: string): Promise<void> {
     return new Promise<void>(async (resolve) => {
         let page = 0;
@@ -63,11 +67,7 @@ export function setTimeoutValue(newTimeout: number) {
     timeout = newTimeout;
     AtCoderScraper.logger.info(`Changed timeout to ${timeout}`);
 }
-async function CrawlSubmissionWorker(
-    contest: string,
-    page: number,
-    waitingJudges: Set<bigint>,
-): Promise<boolean> {
+async function CrawlSubmissionWorker(contest: string, page: number, waitingJudges: Set<bigint>): Promise<boolean> {
     const submissions = await getSubmissionPage(contest, page);
     if (submissions.length === 0) {
         return true;
@@ -79,12 +79,8 @@ async function CrawlSubmissionWorker(
             submissionId: { in: submissionIds },
         },
     });
-    const existingSubmissionIds = new Set(
-        existingSubmissions.map((submission) => submission.submissionId),
-    );
-    const unknownSubmissions = submissions.filter(
-        (submission) => !existingSubmissionIds.has(submission.submissionId),
-    );
+    const existingSubmissionIds = new Set(existingSubmissions.map((submission) => submission.submissionId));
+    const unknownSubmissions = submissions.filter((submission) => !existingSubmissionIds.has(submission.submissionId));
     for (const submission of submissions) {
         const prismaSubmission = convertScraperSubmissionToPrismaSubmission(submission);
         try {
@@ -93,6 +89,11 @@ async function CrawlSubmissionWorker(
                 create: { name: submission.userId },
                 update: {},
             });
+            let beforeSubmission = await Database.getDatabase().submissions.findFirst({
+                where: {
+                    submissionId: submission.submissionId,
+                },
+            });
             await Database.getDatabase().submissions.upsert({
                 where: {
                     submissionId: submission.submissionId,
@@ -100,6 +101,9 @@ async function CrawlSubmissionWorker(
                 create: prismaSubmission,
                 update: prismaSubmission,
             });
+            if (!beforeSubmission || beforeSubmission.status !== submission.status) {
+                submissionListeners.forEach((listener) => listener(submission));
+            }
         } catch (e) {
             AtCoderScraper.logger.error(`Failed to upsert submission ${submission.submissionId}`, {
                 error: e,
@@ -169,17 +173,13 @@ export async function getSubmissionPage(contest: string, page: number) {
             response = await Proxy.get(url, AtCoderScraper.getCookie());
             if (response.status >= 500 && response.status < 600) {
                 retryCount++;
-                AtCoderScraper.logger.info(
-                    `Received ${response.status}, retrying attempt ${retryCount}/${maxRetries}`,
-                );
+                AtCoderScraper.logger.info(`Received ${response.status}, retrying attempt ${retryCount}/${maxRetries}`);
                 continue;
             }
             break;
         } catch (e) {
             retryCount++;
-            AtCoderScraper.logger.info(
-                `Received Error, retrying attempt ${retryCount}/${maxRetries}`,
-            );
+            AtCoderScraper.logger.info(`Received Error, retrying attempt ${retryCount}/${maxRetries}`);
             if (e instanceof AxiosError) {
                 if (e.response && e.response.status == 404) {
                     break;
@@ -251,12 +251,7 @@ export function analyzeSubmission(row: Element): Submission {
     const status = parseSubmissionStatus(statusText);
 
     // For submissions with CE, WJ or WR status
-    if (
-        status === SubmissionStatus.CE ||
-        status === SubmissionStatus.WJ ||
-        status === SubmissionStatus.WR ||
-        status === SubmissionStatus.IE
-    ) {
+    if (status === SubmissionStatus.CE || status === SubmissionStatus.WJ || status === SubmissionStatus.WR || status === SubmissionStatus.IE) {
         return {
             status,
             contestId,
@@ -354,13 +349,7 @@ export async function getSubmission(contestId: string, submissionId: string) {
                     // For successful/failed submissions, parse additional fields.
                     const timeText = cell.next().find('td').text().replace('ms', '').trim();
                     info.time = parseInt(timeText, 10);
-                    const memoryText = cell
-                        .next()
-                        .next()
-                        .find('td')
-                        .text()
-                        .replace('KB', '')
-                        .trim();
+                    const memoryText = cell.next().next().find('td').text().replace('KB', '').trim();
                     info.memory = parseInt(memoryText, 10);
                 }
                 break;

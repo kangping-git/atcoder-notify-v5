@@ -1,4 +1,4 @@
-import { TextMeasurer } from '../../utils/images/measurer';
+import { TextMeasurer } from '../../../utils/images/measurer';
 
 interface LineProps {
     x1: number;
@@ -48,17 +48,7 @@ interface TextProps {
     maxLength?: number;
 }
 const textMeasurer = new TextMeasurer();
-export function createSVGText({
-    x,
-    y,
-    text,
-    fontSize,
-    fontFamily,
-    fillColor,
-    textAlign,
-    textBaseline,
-    maxLength,
-}: TextProps): string {
+export function createSVGText({ x, y, text, fontSize, fontFamily, fillColor, textAlign, textBaseline, maxLength }: TextProps): string {
     fontSize = fontSize || 16;
     fontFamily = fontFamily || 'Arial';
     fillColor = fillColor || 'black';
@@ -92,18 +82,7 @@ interface MessageBoxProps {
     bgColor?: string;
     width?: number;
 }
-export function createSVGMessageBox({
-    fromX,
-    fromY,
-    toX,
-    toY,
-    text,
-    fontSize,
-    fontFamily,
-    fillColor,
-    bgColor,
-    width,
-}: MessageBoxProps): string {
+export function createSVGMessageBox({ fromX, fromY, toX, toY, text, fontSize, fontFamily, fillColor, bgColor, width }: MessageBoxProps): string {
     fontSize = fontSize || 12;
     fontFamily = fontFamily || 'Arial';
     fillColor = fillColor || 'black';
@@ -128,9 +107,7 @@ export function createSVGMessageBox({
         lineColor: '#fff',
         lineWidth: 1,
     });
-    let boxSVG = `<rect x="${toX - width / 2}" y="${
-        toY - 10
-    }" width="${width}" height="20" fill="${bgColor}" stroke="#888" stroke-width="0.5" rx="2" />`;
+    let boxSVG = `<rect x="${toX - width / 2}" y="${toY - 10}" width="${width}" height="20" fill="${bgColor}" stroke="#888" stroke-width="0.5" rx="2" />`;
     return boxLineSVG + boxSVG + textSVG;
 }
 export function getRatingColor(rating: number): { color: string; alpha: number } {

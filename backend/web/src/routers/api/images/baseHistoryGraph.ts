@@ -1,5 +1,5 @@
-import { Database } from '../../database';
-import { normalizeRating } from '../../utils/rating';
+import { Database } from '../../../database';
+import { normalizeRating } from '../../../utils/rating';
 import { createSVGCircle, createSVGLine, createSVGMessageBox, createSVGText, getRatingColor } from './svgHelpers';
 import type { GraphFeature } from './features/GraphFeature';
 
@@ -62,10 +62,7 @@ export class BaseHistoryGraph {
         await this.ensureHistoryLoaded();
 
         if (!this.ratingHistory.length) {
-            return this.wrapSVG(
-                '<text x="50" y="180" font-size="16" fill="#888">No rating history available</text>',
-                this.height,
-            );
+            return this.wrapSVG('<text x="50" y="180" font-size="16" fill="#888">No rating history available</text>', this.height);
         }
 
         /* zIndex で並び替え */
@@ -94,10 +91,7 @@ export class BaseHistoryGraph {
 
         await this.ensureHistoryLoaded();
         if (!this.ratingHistory.length) {
-            return this.wrapSVG(
-                '<text x="50" y="180" font-size="16" fill="#888">No rating history available</text>',
-                this.height + 80,
-            );
+            return this.wrapSVG('<text x="50" y="180" font-size="16" fill="#888">No rating history available</text>', this.height + 80);
         }
         const headerSVG = await this.drawRatingHeader();
         const graphSVG = await this.buildHistorySVG();
@@ -110,10 +104,7 @@ export class BaseHistoryGraph {
     /* ===================================================== */
 
     public getX(timeMs: number): number {
-        return (
-            this.graphPos.x +
-            ((timeMs - this.drawingMinTime) / (this.drawingMaxTime - this.drawingMinTime)) * this.graphSize.width
-        );
+        return this.graphPos.x + ((timeMs - this.drawingMinTime) / (this.drawingMaxTime - this.drawingMinTime)) * this.graphSize.width;
     }
     public getY(rating: number): number {
         return (
@@ -203,9 +194,7 @@ export class BaseHistoryGraph {
             const col = getRatingColor(rectLow);
 
             bgRects.push(
-                `<rect x="${this.graphPos.x}" y="${this.getY(rectHigh)}" width="${this.graphSize.width}" height="${
-                    this.getY(rectLow) - this.getY(rectHigh)
-                }"
+                `<rect x="${this.graphPos.x}" y="${this.getY(rectHigh)}" width="${this.graphSize.width}" height="${this.getY(rectLow) - this.getY(rectHigh)}"
           fill="${col.color}" fill-opacity="0.3"/>`,
             );
 
@@ -446,9 +435,7 @@ export class BaseHistoryGraph {
 
     /** <svg> ラッパ */
     private wrapSVG(inner: string, height: number): string {
-        return `<svg xmlns="http://www.w3.org/2000/svg" width="${
-            this.width + (this.hasSubmissionFeature() ? 40 : 0)
-        }" height="${height}"
+        return `<svg xmlns="http://www.w3.org/2000/svg" width="${this.width + (this.hasSubmissionFeature() ? 40 : 0)}" height="${height}"
       viewBox="0 0 ${this.width + (this.hasSubmissionFeature() ? 40 : 0)} ${height}">
       <defs>
         <filter id="drop-shadow" filterUnits="userSpaceOnUse" x="-40" y="-40" width="720" height="440">
