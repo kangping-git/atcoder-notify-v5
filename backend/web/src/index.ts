@@ -94,12 +94,10 @@ app.use((req, res) => {
     responseError(404, res, req);
 });
 
-app.use(
-    (err: Error, req: express.Request, res: express.Response, next: express.NextFunction): void => {
-        console.error(err);
-        responseError(500, res, req);
-    },
-);
+app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction): void => {
+    console.error(err);
+    responseError(500, res, req);
+});
 
 app.listen(PORT, async () => {
     await mcp.connect(transport);

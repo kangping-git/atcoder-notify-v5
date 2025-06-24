@@ -117,7 +117,6 @@ router.get(['/', '/count'], async (req, res) => {
             country: true,
             algoRating: true,
             heuristicRating: true,
-            id: true,
         },
         take: limit,
     });
@@ -138,7 +137,7 @@ router.get(['/', '/count'], async (req, res) => {
     }
     res.json({ users, nextCursor });
 });
-router.get('/:name/', async (req, res) => {
+router.get('/:name', async (req, res) => {
     const { name } = req.params;
     if (!name) {
         res.status(400).json({ error: 'User name is required' });
@@ -147,7 +146,6 @@ router.get('/:name/', async (req, res) => {
     const userData = await Database.getDatabase().user.findUnique({
         where: { name },
         select: {
-            id: true,
             name: true,
             country: true,
             algoRating: true,
@@ -228,8 +226,130 @@ router.get('/:name/history', async (req, res) => {
     res.json(history);
 });
 
-router.get('/:name/submissions', (req, res) => {});
-router.get('/:name/submissions/:submissionId', (req, res) => {});
+router.get(['/:name/submissions', '/:name/submissions/count'], async (req, res) => {
+    const { name } = req.params;
+    const QuerySchema = z.object({
+        contestId: z.string().optional(),
+        problemId: z.string().optional(),
+        status: z.preprocess((val) => {
+            if (typeof val === 'string' && val !== '') return val.toUpperCase();
+            return void 0;
+        }, z.enum(['AC', 'WA', 'TLE', 'MLE', 'RE', 'CE', 'QLE', 'OLE', 'IE', 'WJ', 'WR']).optional()),
+        language: z.string().optional(),
+        since: z.preprocess((val) => {
+            if (typeof val === 'string' && val !== '') return new Date(val);
+            return undefined;
+        }, z.date().optional()),
+        until: z.preprocess((val) => {
+            if (typeof val === 'string' && val !== '') return new Date(val);
+            return undefined;
+        }, z.date().optional()),
+        cursor: z.string().optional(),
+        limit: z.preprocess((val) => {
+            if (typeof val === 'string' && val !== '') return parseInt(val, 10);
+            return undefined;
+        }, z.number().min(1).max(200).default(50)),
+    });
+    const query = QuerySchema.safeParse(req.query);
+    if (!query.success) {
+        res.status(400).json({ error: 'Invalid query parameters', details: query.error.errors });
+        return;
+    }
+    const { contestId, problemId, status, language, since, until, cursor, limit } = query.data;
+    const where: any = {
+        userId: name,
+        contestId: contestId || undefined,
+        problemId: problemId || undefined,
+        status: status || undefined,
+        language: {
+            contains: language || undefined,
+        },
+    };
+    if (cursor) {
+        try {
+            where.submissionId = {
+                lt: BigInt(Buffer.from(cursor, 'base64').toString('utf8')),
+            };
+        } catch {
+            res.status(400).json({ error: 'Invalid cursor' });
+            return;
+        }
+    }
+    if (since) {
+        where.datetime = { gte: since };
+    }
+    if (until) {
+        where.datetime = { ...where.datetime, lte: until };
+    }
+    if (req.path.endsWith('/count')) {
+        const count = await Database.getDatabase().submissions.count({ where });
+        res.json({ count });
+        return;
+    }
+    const data = await Database.getDatabase().submissions.findMany({
+        where,
+        orderBy: [{ submissionId: 'desc' }],
+        take: limit,
+        select: {
+            submissionId: true,
+            contestId: true,
+            problemId: true,
+            status: true,
+            codeLength: true,
+            datetime: true,
+            language: true,
+            memory: true,
+            time: true,
+            score: true,
+            userId: true,
+        },
+    });
+    if (data.length === 0) {
+        res.json({ submissions: [], nextCursor: null });
+        return;
+    }
+    const nextCursor = data.length == limit ? Buffer.from(data[limit - 1].submissionId.toString()).toString('base64') : null;
+    res.json({
+        submissions: data.slice(0, limit).map((sub) =>
+            Object.assign(sub, {
+                submissionId: String(sub.submissionId),
+            }),
+        ),
+        nextCursor,
+    });
+});
+router.get('/:name/submissions/:submissionId', async (req, res) => {
+    const { name, submissionId } = req.params;
+    if (!name || !submissionId) {
+        res.status(400).json({ error: 'User name and submission ID are required' });
+        return;
+    }
+    const submission: any = await Database.getDatabase().submissions.findUnique({
+        where: {
+            userId: name,
+            submissionId: BigInt(submissionId),
+        },
+        select: {
+            submissionId: true,
+            contestId: true,
+            problemId: true,
+            status: true,
+            codeLength: true,
+            datetime: true,
+            contest: true,
+            language: true,
+            memory: true,
+            time: true,
+            score: true,
+            user: true,
+            userId: true,
+        },
+    });
+    if (submission) {
+        submission.submissionId = submission.submissionId.toString();
+    }
+    res.json(submission);
+});
 
 router.get(['/:name/rating.svg', '/:name/rating.png'], async (req, res) => {
     const { name } = req.params;
