@@ -14,6 +14,11 @@ export async function rebuildUsersTable() {
                 id: {
                     gte: cursor,
                 },
+                ratings: {
+                    some: {
+                        newRating: 0,
+                    },
+                },
             },
             take: batchSize,
             orderBy: {
@@ -29,13 +34,9 @@ export async function rebuildUsersTable() {
                     userId: user.id,
                 },
             });
-            history.sort(
-                (a, b) =>
-                    contestEndTimes.get(a.contestId)!.getTime() -
-                    contestEndTimes.get(b.contestId)!.getTime(),
-            );
-            let algoRating = 0;
-            let heuristicRating = 0;
+            history.sort((a, b) => contestEndTimes.get(a.contestId)!.getTime() - contestEndTimes.get(b.contestId)!.getTime());
+            let algoRating = -1;
+            let heuristicRating = -1;
             for (const change of history) {
                 if (change.isHeuristic) {
                     heuristicRating = change.newRating;
@@ -72,10 +73,7 @@ export async function rebuildUsersTable() {
                 data: {
                     algoRating: algoRating,
                     heuristicRating: heuristicRating,
-                    lastContestTime:
-                        history.length > 0
-                            ? contestEndTimes.get(history[history.length - 1].contestId)
-                            : null,
+                    lastContestTime: history.length > 0 ? contestEndTimes.get(history[history.length - 1].contestId) : null,
                     algoAPerf: APerfAlgo,
                     heuristicAPerf: APerfHeuristic,
                     country: user.country,

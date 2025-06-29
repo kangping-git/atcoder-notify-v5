@@ -11,7 +11,7 @@ sharp.cache({
 
 const router = Router();
 
-router.get(['/', '/count'], async (req, res) => {
+router.get(['/', '/count', '/histogram'], async (req, res) => {
     const QuerySchema = z.object({
         q: z.string().optional(),
         country: z.string().optional(),
@@ -43,7 +43,7 @@ router.get(['/', '/count'], async (req, res) => {
         res.status(400).json({ error: 'Invalid query parameters', details: query.error.errors });
         return;
     }
-    const { sort, limit, cursor, q, country, minAlgo, maxAlgo, minHeuristic, maxHeuristic } = query.data;
+    let { sort, limit, cursor, q, country, minAlgo, maxAlgo, minHeuristic, maxHeuristic } = query.data;
     const isAsc = !sort.startsWith('-');
     const sortField0 = sort.replace('-', '');
     if (req.path == '/count') {
@@ -55,6 +55,26 @@ router.get(['/', '/count'], async (req, res) => {
         };
         const count = await Database.getDatabase().user.count({ where: baseWhere });
         res.json({ count });
+        return;
+    }
+    if (req.path == '/histogram') {
+        const baseWhere: any = {
+            name: q ? { contains: q } : undefined,
+            country: country || undefined,
+            algoRating: { gte: minAlgo, lte: maxAlgo },
+            heuristicRating: { gte: minHeuristic, lte: maxHeuristic },
+        };
+        const algoHistogram = await Database.getDatabase().user.groupBy({
+            by: ['algoRating'],
+            where: baseWhere,
+            _count: true,
+        });
+        const heuristicHistogram = await Database.getDatabase().user.groupBy({
+            by: ['heuristicRating'],
+            where: baseWhere,
+            _count: true,
+        });
+        res.json({ algoHistogram, heuristicHistogram });
         return;
     }
 
@@ -169,29 +189,24 @@ router.get('/:name/stats', async (req, res) => {
     }
     const db = Database.getDatabase();
 
-    const [submissionCount, ACCount, ContestCount, firstAC, maxAlgoRating, maxHeuristicRating] = await Promise.all([
-        db.submissions.count({
+    // 並列クエリを減らして高速化
+    const [submissions, ratingEvents] = await Promise.all([
+        db.submissions.findMany({
             where: { user: { name } },
-        }),
-        db.submissions.count({
-            where: { user: { name }, status: 'AC' },
-        }),
-        db.userRatingChangeEvent.count({
-            where: { user: { name } },
-        }),
-        db.submissions.findFirst({
-            where: { user: { name }, status: 'AC' },
             orderBy: { datetime: 'asc' },
         }),
-        db.userRatingChangeEvent.findFirst({
-            where: { user: { name }, isHeuristic: false },
+        db.userRatingChangeEvent.findMany({
+            where: { user: { name } },
             orderBy: { newRating: 'desc' },
-        }),
-        db.userRatingChangeEvent.findFirst({
-            where: { user: { name }, isHeuristic: true },
-            orderBy: { newRating: 'desc' },
+            select: { newRating: true, isHeuristic: true },
         }),
     ]);
+    const ContestCount = ratingEvents.length;
+    const maxAlgoRating = ratingEvents.find((e) => !e.isHeuristic) || null;
+    const maxHeuristicRating = ratingEvents.find((e) => e.isHeuristic) || null;
+    const firstAC = submissions.find((s) => s.status === 'AC') || null;
+    const submissionCount = submissions.length;
+    const ACCount = submissions.filter((s) => s.status === 'AC').length;
     res.json({
         submissionCount,
         ACCount,
@@ -221,6 +236,9 @@ router.get('/:name/history', async (req, res) => {
             isHeuristic: true,
             contestId: true,
             contest: true,
+            performance: true,
+            InnerPerformance: true,
+            place: true,
         },
     });
     res.json(history);

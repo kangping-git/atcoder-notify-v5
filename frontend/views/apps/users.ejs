@@ -4,9 +4,23 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Analyze AtCoder Users</title>
-        <script src="/static/users.js"></script>
+        <script src="/static/users.js" async></script>
     </head>
     <body>
-        <table></table>
+        <main>
+            <table id="mainTable">
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Name</th>
+                        <th>Country</th>
+                        <th>Algo Rating</th>
+                        <th>Heuristic Rating</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="userTableBody"></tbody>
+            </table>
+        </main>
     </body>
 </html>

@@ -7,6 +7,7 @@ import { AtCoderScraper } from './scraper/atcoderScraper';
 import { Proxy } from './proxy/proxy';
 import http from 'http';
 import { addSubmissionListener } from './scraper/submissions/getSubmissions';
+import { rebuildUsersTable } from './build_db/users';
 
 export namespace Main {
     let logger: Logger | null = null;
@@ -21,6 +22,7 @@ export namespace Main {
         logger.info('Starting background tasks...');
         Proxy.initProxy(process.env.SOCK5_PROXY!);
         await Database.initDatabase();
+        // rebuildUsersTable();
         await AtCoderScraper.initAtCoderScraper();
         addSubmissionListener((submission) => {
             clients.forEach((client) => {

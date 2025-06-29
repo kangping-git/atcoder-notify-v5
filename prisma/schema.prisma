@@ -95,8 +95,8 @@ model Contest {
 model User {
   id              Int   @id @default(autoincrement())
   name            String   @unique
-  algoRating      Int @default(0)
-  heuristicRating Int @default(0)
+  algoRating      Int @default(-1)
+  heuristicRating Int @default(-1)
   algoAPerf       Float?
   heuristicAPerf  Float?
   country         String  @default("Unknown")

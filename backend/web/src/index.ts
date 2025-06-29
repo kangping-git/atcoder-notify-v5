@@ -5,12 +5,14 @@ import { PrismaClient } from '@prisma/client';
 import expressSession from 'express-session';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { PrismaStore } from './prisma-session';
+import logger from 'morgan';
 config({ path: path.join(__dirname, '../../../.env') });
 
 const transport: StreamableHTTPServerTransport = new StreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
 });
 const app = express();
+app.use(logger('dev'));
 const PORT = process.env.PORT || 3000;
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, '../../../frontend/views'));
@@ -62,13 +64,13 @@ app.use((req, res, next) => {
 import mainRouter from './routers/main';
 app.use('/', mainRouter);
 import accountsRouter from './routers/accounts';
-app.use('/accounts', accountsRouter);
+// app.use('/accounts', accountsRouter);
 import appsRouter from './routers/apps';
 app.use('/apps', appsRouter);
 import apiRouter from './routers/api';
 app.use('/api/v1', apiRouter);
 import judgeRouter from './routers/judge';
-app.use('/judge', judgeRouter);
+// app.use('/judge', judgeRouter);
 
 import { responseError } from './error';
 import { Database } from './database';
