@@ -199,6 +199,7 @@ filterWindow.innerHTML = `
                     <option value="heuristicRating">Heuristic Rating</option>
                 </select>
                 <br />
+                isActive: <input type="checkbox" id="isActive" /><br />
                 reverse: <input type="checkbox" id="reverse" /><br />
                 <button id="applyFilters">Apply</button>`;
 document.body.appendChild(filterWindow);
@@ -214,6 +215,7 @@ const inputs = {
     sortBy: document.getElementById('sortBy') as HTMLSelectElement,
     sortReverse: document.getElementById('reverse') as HTMLInputElement,
     limit: document.getElementById('limitFilter') as HTMLInputElement,
+    isActive: document.getElementById('isActive') as HTMLInputElement,
 };
 for (const input of Object.values(inputs)) {
     if (input instanceof HTMLInputElement || input instanceof HTMLSelectElement) {
@@ -289,6 +291,9 @@ export function getParams() {
         if (params.sort) {
             params.sort = '-' + params.sort;
         }
+    }
+    if (inputs.isActive.checked) {
+        params.isActive = 'true';
     }
     if (cursor) {
         params.cursor = cursor;

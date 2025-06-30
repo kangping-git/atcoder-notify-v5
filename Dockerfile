@@ -5,7 +5,9 @@ WORKDIR /app
 
 # Install root dependencies
 COPY package.json ./
-RUN npm install
+COPY package-lock.json ./
+RUN npm cache clean --force
+RUN npm ci --verbose
 
 # Install dependencies for subprojects
 COPY frontend/package.json frontend/package.json
@@ -27,14 +29,33 @@ RUN npm install --prefix status
 COPY backend ./backend
 COPY backend/web ./backend/web
 COPY frontend ./frontend
-COPY judgement ./judgement
 COPY status ./status
 COPY fonts ./fonts
 COPY docs ./docs
 COPY prisma ./prisma
+COPY .env .env
+RUN npx prisma generate
 
 # Build subprojects except scraping
-RUN npm run build:frontend && npm run build:backend && npm run build:judge
+RUN npm run build:frontend && npm run build:backend
 
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+      wget \
+      unzip \
+      fontconfig \
+      fonts-lato \
+      fonts-noto-cjk && \
+    rm -rf /var/lib/apt/lists/*
+# Squada One を Google Fonts からダウンロードして配置
+RUN mkdir -p /usr/share/fonts/truetype/squadaone && \
+    wget -qO /usr/share/fonts/truetype/squadaone/SquadaOne-Regular.ttf \
+      https://github.com/google/fonts/raw/main/ofl/squadaone/SquadaOne-Regular.ttf
+
+# フォントキャッシュを強制更新
+RUN fc-cache -f -v
+
+
+EXPOSE 4080
 CMD ["npm", "start"]
 

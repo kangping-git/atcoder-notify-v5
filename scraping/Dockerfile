@@ -5,13 +5,18 @@ WORKDIR /app
 
 # Install dependencies from the monorepo
 COPY package.json ./
-RUN npm install
+COPY package-lock.json ./
+RUN npm ci --verbose
 
 # Copy scraping sources
 COPY scraping ./scraping
+COPY prisma ./prisma
+COPY .env .env
 
+RUN npx prisma generate
 # Build scraping project
 RUN npm run build:scraping
 
 # Run scraping service
+EXPOSE 4082
 CMD ["node", "scraping/dist/index.js"]

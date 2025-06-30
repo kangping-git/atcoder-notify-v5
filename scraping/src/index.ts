@@ -7,7 +7,6 @@ import { AtCoderScraper } from './scraper/atcoderScraper';
 import { Proxy } from './proxy/proxy';
 import http from 'http';
 import { addSubmissionListener } from './scraper/submissions/getSubmissions';
-import { rebuildUsersTable } from './build_db/users';
 
 export namespace Main {
     let logger: Logger | null = null;
@@ -57,7 +56,8 @@ export namespace Main {
             const url = new URL(req.url!, baseURL);
             if (req.method == 'GET') {
                 if (url.pathname.startsWith('/api/')) {
-                    const get = Proxy.get(url.href.slice(5), AtCoderScraper.getCookie());
+                    const url = new URL(req.url!.slice(5), baseURL);
+                    const get = Proxy.get(url.href, AtCoderScraper.getCookie());
                     get.then((response) => {
                         res.end(response.data);
                     }).catch((error) => {

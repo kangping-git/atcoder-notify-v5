@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { EventSource } from 'eventsource';
 import { Database } from '../../database';
 
-const MasterSSE = new EventSource(`http://localhost:${process.env.PROXY_PORT || 3002}/sse/`);
+const MasterSSE = new EventSource(`http://127.0.0.1:${process.env.PROXY_PORT || 3002}/sse/`);
 
 const router = Router();
 
@@ -94,6 +94,25 @@ router.get('/', async (req, res) => {
         nextCursor,
     });
 });
+MasterSSE.addEventListener('message', (event) => {
+    sseConnections.forEach((res) => {
+        res.write(`data: ${event.data}\n\n`);
+    });
+});
+const sseConnections = new Set<ExpressResponse>();
+router.get('/live', (req, res) => {
+    res.setTimeout(2 ** 31 - 1);
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+
+    res.write('\n');
+    sseConnections.add(res);
+    res.on('close', () => {
+        sseConnections.delete(res);
+        res.end();
+    });
+});
 router.get('/:submissionId', async (req, res) => {
     const { submissionId } = req.params;
     if (!submissionId) {
@@ -124,26 +143,6 @@ router.get('/:submissionId', async (req, res) => {
         submission.submissionId = submission.submissionId.toString();
     }
     res.json(submission);
-});
-
-MasterSSE.addEventListener('message', (event) => {
-    sseConnections.forEach((res) => {
-        res.write(`data: ${event.data}\n\n`);
-    });
-});
-const sseConnections = new Set<ExpressResponse>();
-router.get('/live', (req, res) => {
-    res.setTimeout(2 ** 31 - 1);
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-
-    res.write('\n');
-    sseConnections.add(res);
-    res.on('close', () => {
-        sseConnections.delete(res);
-        res.end();
-    });
 });
 
 export default router;

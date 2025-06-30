@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { getHistoryImage, getUserRatingImage } from './images/history';
-import sharp from 'sharp';
-import { z } from 'zod';
+import sharp, { bool } from 'sharp';
+import { boolean, z } from 'zod';
 import { Database } from '../../database';
 sharp.cache({
     memory: 200,
@@ -37,21 +37,28 @@ router.get(['/', '/count', '/histogram'], async (req, res) => {
             return undefined;
         }, z.number().min(1).max(200).default(50)),
         cursor: z.string().optional(),
+        isActive: z.preprocess((val) => {
+            if (typeof val === 'string' && val !== '') return Boolean(val);
+            return undefined;
+        }, z.boolean().optional()),
     });
     const query = QuerySchema.safeParse(req.query);
     if (!query.success) {
         res.status(400).json({ error: 'Invalid query parameters', details: query.error.errors });
         return;
     }
-    let { sort, limit, cursor, q, country, minAlgo, maxAlgo, minHeuristic, maxHeuristic } = query.data;
+    let { sort, limit, cursor, q, country, minAlgo, maxAlgo, minHeuristic, maxHeuristic, isActive } = query.data;
     const isAsc = !sort.startsWith('-');
     const sortField0 = sort.replace('-', '');
+    const twoYearsAgo = new Date();
+    twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
     if (req.path == '/count') {
         const baseWhere: any = {
             name: q ? { contains: q } : undefined,
             country: country || undefined,
             algoRating: { gte: minAlgo, lte: maxAlgo },
             heuristicRating: { gte: minHeuristic, lte: maxHeuristic },
+            lastContestTime: isActive ? { gte: twoYearsAgo } : undefined,
         };
         const count = await Database.getDatabase().user.count({ where: baseWhere });
         res.json({ count });
@@ -63,6 +70,7 @@ router.get(['/', '/count', '/histogram'], async (req, res) => {
             country: country || undefined,
             algoRating: { gte: minAlgo, lte: maxAlgo },
             heuristicRating: { gte: minHeuristic, lte: maxHeuristic },
+            lastContestTime: isActive ? { gte: twoYearsAgo } : undefined,
         };
         const algoHistogram = await Database.getDatabase().user.groupBy({
             by: ['algoRating'],
@@ -93,6 +101,7 @@ router.get(['/', '/count', '/histogram'], async (req, res) => {
         country: country || undefined,
         algoRating: { gte: minAlgo, lte: maxAlgo },
         heuristicRating: { gte: minHeuristic, lte: maxHeuristic },
+        lastContestTime: isActive ? { gte: twoYearsAgo } : undefined,
     };
 
     let cursorFilter: any = {};
