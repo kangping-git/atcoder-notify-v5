@@ -25,20 +25,6 @@ RUN npm install --prefix judgement
 COPY status/package.json status/package.json
 RUN npm install --prefix status
 
-# Copy project source excluding scraping
-COPY backend ./backend
-COPY backend/web ./backend/web
-COPY frontend ./frontend
-COPY status ./status
-COPY fonts ./fonts
-COPY docs ./docs
-COPY prisma ./prisma
-COPY .env .env
-RUN npx prisma generate
-
-# Build subprojects except scraping
-RUN npm run build:frontend && npm run build:backend
-
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
       wget \
@@ -54,6 +40,21 @@ RUN mkdir -p /usr/share/fonts/truetype/squadaone && \
 
 # フォントキャッシュを強制更新
 RUN fc-cache -f -v
+
+# Copy project source excluding scraping
+COPY backend ./backend
+COPY backend/web ./backend/web
+COPY frontend ./frontend
+COPY status ./status
+COPY fonts ./fonts
+COPY docs ./docs
+COPY prisma ./prisma
+COPY .env production.env
+RUN npx prisma generate
+
+# Build subprojects except scraping
+RUN npm run build:frontend && npm run build:backend
+
 
 
 EXPOSE 4080

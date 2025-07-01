@@ -3,7 +3,33 @@ import { z } from 'zod';
 import { EventSource } from 'eventsource';
 import { Database } from '../../database';
 
-const MasterSSE = new EventSource(`http://127.0.0.1:${process.env.PROXY_PORT || 3002}/sse/`);
+let MasterSSE: EventSource;
+const sseUrl = `http://${process.env.PROXY_HOST}:${process.env.PROXY_PORT || 3002}/sse/`;
+
+function createMasterSSE() {
+    if (MasterSSE) {
+        MasterSSE.close();
+    }
+    MasterSSE = new EventSource(sseUrl);
+
+    MasterSSE.addEventListener('open', () => {
+        console.log('[MasterSSE] connection opened');
+    });
+
+    MasterSSE.addEventListener('message', (event) => {
+        console.log('[MasterSSE] received:', event.data);
+        sseConnections.forEach((res) => res.write(`data: ${event.data}\n\n`));
+    });
+
+    MasterSSE.addEventListener('error', (err) => {
+        console.error('[MasterSSE] error:', err);
+        // 自動再接続前にクローズしておくとスッキリします
+        MasterSSE.close();
+        setTimeout(createMasterSSE, 3000);
+    });
+}
+
+createMasterSSE();
 
 const router = Router();
 
@@ -94,23 +120,17 @@ router.get('/', async (req, res) => {
         nextCursor,
     });
 });
-MasterSSE.addEventListener('message', (event) => {
-    sseConnections.forEach((res) => {
-        res.write(`data: ${event.data}\n\n`);
-    });
-});
 const sseConnections = new Set<ExpressResponse>();
 router.get('/live', (req, res) => {
     res.setTimeout(2 ** 31 - 1);
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
-
-    res.write('\n');
+    res.flushHeaders();
+    res.write(': ping\n\n');
     sseConnections.add(res);
     res.on('close', () => {
         sseConnections.delete(res);
-        res.end();
     });
 });
 router.get('/:submissionId', async (req, res) => {

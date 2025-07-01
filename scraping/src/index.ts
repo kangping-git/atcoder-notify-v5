@@ -72,7 +72,8 @@ export namespace Main {
                         'Cache-Control': 'no-cache',
                         Connection: 'keep-alive',
                     });
-                    res.write('\n');
+                    res.flushHeaders();
+                    res.write(': connected\n\n');
                     clients.add(res);
                     res.on('close', () => {
                         clients.delete(res);
