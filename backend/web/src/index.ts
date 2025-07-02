@@ -64,13 +64,17 @@ app.use((req, res, next) => {
 import mainRouter from './routers/main';
 app.use('/', mainRouter);
 import accountsRouter from './routers/accounts';
-// app.use('/accounts', accountsRouter);
+if (!process.env.PRODUCTION) {
+    app.use('/accounts', accountsRouter);
+}
 import appsRouter from './routers/apps';
 app.use('/apps', appsRouter);
 import apiRouter from './routers/api';
 app.use('/api/v1', apiRouter);
 import judgeRouter from './routers/judge';
-// app.use('/judge', judgeRouter);
+if (!process.env.PRODUCTION) {
+    app.use('/judge', judgeRouter);
+}
 
 import { responseError } from './error';
 import { Database } from './database';

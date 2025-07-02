@@ -22,7 +22,6 @@ RUN apt-get update \
       diffutils \
  && rm -rf /var/lib/apt/lists/*
 
-
 # ジャッジ用ディレクトリを用意
 WORKDIR /opt/judge
 
@@ -32,8 +31,11 @@ COPY cpp-judge/language_config.json ./language_config.json
 # ビルド済みランナーを配置
 COPY --from=builder /app/judge-runner /usr/local/bin/judge-runner
 
+# ランタイム用ワークディレクトリをあらかじめ作成
+RUN mkdir -p /opt/judge/runtime && chmod 777 /opt/judge/runtime
+
 # submission ディレクトリは実行時にマウント
 VOLUME ["/opt/judge/submission"]
 
-# エントリポイント
-ENTRYPOINT ["judge-runner"]
+# コンテナ起動後は常駐させ、exec 用イメージに
+CMD ["tail", "-f", "/dev/null"]

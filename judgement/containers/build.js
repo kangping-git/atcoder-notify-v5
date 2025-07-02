@@ -8,20 +8,18 @@ const files = fs.readdirSync(__dirname, { withFileTypes: true });
 
 for (const file of files) {
     if (file.isDirectory() && file.name !== 'runner') {
-        const containerName = file.name; // 例: "cpp-judge"
-        const dockerfileRelPath = path.posix.join(containerName, 'Dockerfile'); // "cpp-judge/Dockerfile"
+        const containerName = file.name;
+        const dockerfileRelPath = path.posix.join(containerName, 'Dockerfile');
         const contextPath = __dirname;
 
-        // __dirname 以下を丸ごと tar 化
         const contextStream = tar.pack(contextPath, {
-            // 念のため隠しファイルも含めるオプション
             entries: fs.readdirSync(contextPath),
         });
 
         dockerClient.buildImage(
             contextStream,
             {
-                t: containerName,
+                t: 'kyo-pro-club-judge/' + containerName,
                 dockerfile: dockerfileRelPath,
                 buildargs: {},
             },

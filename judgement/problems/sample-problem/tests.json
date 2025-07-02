@@ -1,0 +1,9 @@
+{
+    "tests": {
+        "sample": [],
+        "handmade": [],
+        "random": ["random-1", "random-2", "random-3"]
+    },
+    "memoryLimit": 1024,
+    "timeLimit": 1000
+}

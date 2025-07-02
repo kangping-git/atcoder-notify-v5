@@ -7,7 +7,10 @@
         "start:judge_worker": "node worker/dist/index.js",
         "build:watch:judge_worker": "cd ./worker/ & tsc -w",
         "build": "concurrently \"npm run build:judge_server\" \"npm run build:judge_worker\"",
-        "start": "concurrently \"npm run start:judge_server\" \"npm run start:judge_worker\"",
+        "start": "npm run start:judge_server",
         "build:watch": "concurrently \"npm run build:watch:judge_server\" \"npm run build:watch:judge_worker\""
+    },
+    "dependencies": {
+        "generic-pool": "^3.9.0"
     }
 }

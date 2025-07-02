@@ -49,6 +49,7 @@ COPY status ./status
 COPY fonts ./fonts
 COPY docs ./docs
 COPY prisma ./prisma
+COPY judgement ./judgement
 COPY .env production.env
 RUN npx prisma generate
 
