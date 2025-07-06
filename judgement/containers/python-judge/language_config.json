@@ -1,0 +1,6 @@
+{
+    "run_command": ["python3.12", "/opt/judge/submission/main.py"],
+    "filename": "main.py",
+    "is_interpreter": true,
+    "build_command": []
+}

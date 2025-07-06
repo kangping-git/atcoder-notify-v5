@@ -4,7 +4,6 @@ import fsSync from 'fs';
 import path from 'path';
 import Docker from 'dockerode';
 import { PrismaClient } from '@prisma/client';
-import { createPool } from 'generic-pool';
 import os from 'os';
 import { PassThrough } from 'stream';
 import { config } from 'dotenv';
@@ -30,13 +29,10 @@ interface JudgeResult {
 }
 
 const REDIS_QUEUE = 'judgement';
-const WORKDIR_IN_CONTAINER = '/opt/judge/runtime';
-const CONCURRENCY = Number(process.env.JUDGE_PARALLELISM) || Math.max(os.cpus().length - 1, 1);
 
 async function main() {
     const redisRead = createClient({ url: 'redis://127.0.0.1:6379' });
     const redisWrite = createClient({ url: 'redis://127.0.0.1:6379' });
-    const prismaClient = new PrismaClient();
     const dockerClient = new Docker({ host: process.env.DOCKER_HOST || 'localhost', port: Number(process.env.DOCKER_PORT) || 2375 });
     await redisRead.connect();
     await redisWrite.connect();
@@ -59,6 +55,10 @@ async function main() {
             const langCfg = JSON.parse(await fs.readFile(path.join(__dirname, `../../containers/${imageName}/language_config.json`), 'utf-8'));
             await fs.writeFile(path.join(subDir, langCfg.filename), code);
 
+            if (!fsSync.existsSync(path.join(__dirname, '../../problems', problemId))) {
+                console.error(`Problem directory for ${problemId} does not exist`);
+                continue;
+            }
             const testCfg: TestConfig = JSON.parse(await fs.readFile(path.join(__dirname, '../../problems', problemId, 'tests.json'), 'utf-8'));
             const tests = [...testCfg.tests.sample, ...testCfg.tests.handmade, ...testCfg.tests.random];
 
@@ -111,7 +111,6 @@ async function main() {
                     });
                     await new Promise<void>((r) => stdoutBuild.on('end', r));
 
-                    // ノイズ除去
                     while (!bufB.startsWith('{')) bufB = bufB.substring(1);
                     while (!bufB.endsWith('}')) bufB = bufB.slice(0, -1);
 
@@ -131,8 +130,8 @@ async function main() {
                         continue;
                     }
                 }
+                console.log(`Build successful for judgement ${judgementId}`);
 
-                // テスト実行
                 for (const testName of tests) {
                     await fs.writeFile(
                         path.join(subDir, 'input.txt'),
@@ -160,10 +159,11 @@ async function main() {
                     });
 
                     let bufT = '';
-                    stdoutTest.on('data', (c: Buffer) => (bufT += c.toString()));
+                    stdoutTest.on('data', (c: Buffer) => {
+                        bufT += c.toString();
+                    });
                     await new Promise<void>((r) => stdoutTest.on('end', r));
 
-                    // ノイズ除去
                     while (!bufT.startsWith('{')) bufT = bufT.substring(1);
                     while (!bufT.endsWith('}')) bufT = bufT.slice(0, -1);
 
@@ -174,7 +174,6 @@ async function main() {
                         console.error('Failed to parse test JSON:', e, bufT);
                         continue;
                     }
-                    console.log(`Test result for ${testName}:`, JSON.stringify(tRes));
                     tRes.output = await fs.readFile(path.join(subDir, 'out.txt'), 'utf-8').catch(() => '');
                     const key = `judge_result_${judgementId}`;
                     if (!tRes.is_success) {
@@ -193,7 +192,6 @@ async function main() {
                         }
                     }
 
-                    console.log(`Test ${testName} completed for judgement ${judgementId}`);
                     await container
                         .exec({
                             Cmd: ['sh', '-c', `find /opt/judge/runtime -mindepth 1 -delete`],

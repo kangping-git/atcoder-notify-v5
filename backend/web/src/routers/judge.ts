@@ -28,16 +28,9 @@ router.get('/submit/sample', async (req, res) => {
         await connectRedisServer();
     }
     const sampleData = {
-        language: 'cpp17',
+        language: 'python3.12',
         code: `
-#include <iostream>
-#include <string>
-int main() {
-    // 数 GB の文字列を一括出力 → Judge サーバの OOM を狙う
-    std::string s(1024 * 1024 * 32, 'A');
-    std::cout << s << std::endl;
-    return 0;
-}
+print("Hello, World!")
 `,
         problemId: 'sample-problem',
         contestId: 'sample-contest',

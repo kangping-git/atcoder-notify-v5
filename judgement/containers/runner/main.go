@@ -130,7 +130,6 @@ func main() {
     if err != nil {
         panic(err)
     }
-    // defer inFile.Close() は後で明示的に閉じる
 
     ctx, cancel := context.WithTimeout(context.Background(), time.Duration(probConfig.Timeout)*time.Millisecond)
     defer cancel()
