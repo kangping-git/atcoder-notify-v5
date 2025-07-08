@@ -11,7 +11,7 @@ RUN npm ci --verbose
 # Copy scraping sources
 COPY scraping ./scraping
 COPY prisma ./prisma
-COPY .env production.env
+COPY production.env .env
 
 RUN npx prisma generate
 # Build scraping project

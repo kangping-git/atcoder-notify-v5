@@ -7,6 +7,9 @@ import { AtCoderScraper } from './scraper/atcoderScraper';
 import { Proxy } from './proxy/proxy';
 import http from 'http';
 import { addSubmissionListener } from './scraper/submissions/getSubmissions';
+import { config } from 'dotenv';
+import path from 'path';
+config({ path: path.join(__dirname, '../../.env') });
 
 export namespace Main {
     let logger: Logger | null = null;
@@ -19,12 +22,14 @@ export namespace Main {
 
         // Start Background tasks
         logger.info('Starting background tasks...');
+        console.log(process.env.SOCK5_PROXY);
         Proxy.initProxy(process.env.SOCK5_PROXY!);
         await Database.initDatabase();
         // rebuildUsersTable();
         await AtCoderScraper.initAtCoderScraper();
         addSubmissionListener((submission) => {
             clients.forEach((client) => {
+                client.write('event: submission\n');
                 client.write(
                     `data: ${JSON.stringify(submission, (key, value) => {
                         if (value instanceof Date) {
@@ -40,6 +45,22 @@ export namespace Main {
         });
         createProxyServer();
         logger.info('Background tasks started.');
+    }
+    export function sendEvent(event: string, data: any) {
+        clients.forEach((client) => {
+            client.write(`event: ${event}\n`);
+            client.write(
+                `data: ${JSON.stringify(data, (key, value) => {
+                    if (value instanceof Date) {
+                        return value.toISOString();
+                    }
+                    if (typeof value === 'bigint') {
+                        return value.toString();
+                    }
+                    return value;
+                })}\n\n`,
+            );
+        });
     }
     export function getLogger(): Logger {
         if (!logger) {

@@ -1,3 +1,4 @@
+import { Main } from '../..';
 import { Database } from '../../database';
 import { Proxy } from '../../proxy/proxy';
 import { AtCoderScraper } from '../atcoderScraper';
@@ -111,15 +112,9 @@ export namespace ScraperContestResult {
                 continue;
             }
             if (Performance === contestData.ratingRangeEnd + 401) {
-                let temporaryPerformance = await getUserPerformanceFromUserPage(
-                    UserScreenName,
-                    contestId,
-                    contestData.isHeuristic,
-                );
+                let temporaryPerformance = await getUserPerformanceFromUserPage(UserScreenName, contestId, contestData.isHeuristic);
                 if (temporaryPerformance === null) {
-                    AtCoderScraper.logger.warn(
-                        `Failed to fetch performance for user ${UserScreenName} in contest ${contestId}.`,
-                    );
+                    AtCoderScraper.logger.warn(`Failed to fetch performance for user ${UserScreenName} in contest ${contestId}.`);
                     continue;
                 }
                 Performance = temporaryPerformance;
@@ -200,28 +195,25 @@ export namespace ScraperContestResult {
                 },
             });
         }
-        AtCoderScraper.logger.info(
-            `Successfully crawled results for contest ${contestId}, ${results.length} users processed.`,
-        );
+        Main.sendEvent('contestResultCrawled', {
+            contestId: contestId,
+            results: results.map((r) => ({
+                userName: r.UserScreenName,
+                place: r.Place,
+                oldRating: r.OldRating,
+                newRating: r.NewRating,
+                performance: r.Performance,
+            })),
+        });
+        AtCoderScraper.logger.info(`Successfully crawled results for contest ${contestId}, ${results.length} users processed.`);
     }
-    async function getUserPerformanceFromUserPage(
-        user: string,
-        contestId: string,
-        isHeuristic: boolean,
-    ) {
-        AtCoderScraper.logger.info(
-            `Fetching user performance for ${user} in contest ${contestId}.`,
-        );
+    async function getUserPerformanceFromUserPage(user: string, contestId: string, isHeuristic: boolean) {
+        AtCoderScraper.logger.info(`Fetching user performance for ${user} in contest ${contestId}.`);
         const cache = isHeuristic ? heuristicPageCache : algoUserPageCache;
         if (cache.has(user)) {
             const userData = cache.get(user);
-            if (
-                userData &&
-                userData.find((u) => u.ContestScreenName === `${contestId}.contest.atcoder.jp`)
-            ) {
-                return userData.find(
-                    (u) => u.ContestScreenName === `${contestId}.contest.atcoder.jp`,
-                )!.InnerPerformance;
+            if (userData && userData.find((u) => u.ContestScreenName === `${contestId}.contest.atcoder.jp`)) {
+                return userData.find((u) => u.ContestScreenName === `${contestId}.contest.atcoder.jp`)!.InnerPerformance;
             }
         }
         const query = isHeuristic ? 'contestType=heuristic' : 'contestType=algo';
@@ -233,18 +225,12 @@ export namespace ScraperContestResult {
         }
         const userResults: AtCoderUserPerformance[] = response.data;
         if (!Array.isArray(userResults) || userResults.length === 0) {
-            AtCoderScraper.logger.warn(
-                `No results found for user ${user} in contest ${contestId}.`,
-            );
+            AtCoderScraper.logger.warn(`No results found for user ${user} in contest ${contestId}.`);
             return null;
         }
-        const userPerformance = userResults.find(
-            (u) => u.ContestScreenName === `${contestId}.contest.atcoder.jp`,
-        );
+        const userPerformance = userResults.find((u) => u.ContestScreenName === `${contestId}.contest.atcoder.jp`);
         if (!userPerformance) {
-            AtCoderScraper.logger.warn(
-                `No performance data found for user ${user} in contest ${contestId}.`,
-            );
+            AtCoderScraper.logger.warn(`No performance data found for user ${user} in contest ${contestId}.`);
             return null;
         }
         if (isHeuristic) {
