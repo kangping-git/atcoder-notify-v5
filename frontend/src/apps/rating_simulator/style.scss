@@ -1,0 +1,98 @@
+@import url('https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&display=swap');
+
+html,
+body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(45deg, #b6ffed, #d7b5ff);
+    font-family: 'Lato', sans-serif;
+}
+main {
+    position: fixed;
+
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+
+    width: 80vw;
+    height: 80vh;
+    margin: 0 auto;
+    background-color: white;
+    border-radius: 10px;
+    padding: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    text-align: center;
+
+    input[type='text'] {
+        width: 80%;
+        padding: 10px;
+        margin: 10px 0;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+    }
+    input[type='radio'] {
+        display: none;
+    }
+    input[type='radio'] + label {
+        display: inline-block;
+        padding: 10px 20px;
+        margin: 5px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.3s ease, max-width 0.3s ease;
+    }
+    input[type='radio'][name='contestTimes'] + label {
+        padding: 10px;
+    }
+    input[type='radio'] + label:hover {
+        background-color: #f0f0f0;
+    }
+    input[type='radio']:checked + label {
+        background-color: #4caf50;
+        color: white;
+        border-color: #4caf50;
+    }
+    input[type='radio']#timesxCustom + label {
+        padding: 6px 10px;
+        input[type='number'] {
+            width: 60px;
+            padding: 5px;
+            margin-left: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+    }
+
+    #ratingCanvas {
+        width: 90%;
+        height: 50vh;
+        touch-action: none;
+    }
+    @media (max-width: 768px) {
+        #ratingCanvas {
+            width: 100%;
+            height: 35vh;
+        }
+    }
+}
+br.divider {
+    display: none;
+}
+span.divider {
+    position: relative;
+    top: 10px;
+    display: inline-block;
+    height: 2rem;
+    width: 1px;
+    background-color: #ccc;
+}
+@media (max-width: 768px) {
+    br.divider {
+        display: inline-block;
+    }
+    span.divider {
+        display: none;
+    }
+}

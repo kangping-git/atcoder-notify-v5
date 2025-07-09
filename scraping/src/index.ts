@@ -9,6 +9,7 @@ import http from 'http';
 import { addSubmissionListener } from './scraper/submissions/getSubmissions';
 import { config } from 'dotenv';
 import path from 'path';
+import { ScraperContestResult } from './scraper/contests/crawlContestResult';
 config({ path: path.join(__dirname, '../../.env') });
 
 export namespace Main {

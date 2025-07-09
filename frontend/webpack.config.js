@@ -11,6 +11,7 @@ module.exports = {
         apps: './src/apps/apps.ts',
         users: './src/apps/users.ts',
         judge: './src/judge/main.ts',
+        rating_simulator: './src/apps/rating_simulator/index.ts',
     },
     output: {
         filename: '[name].js',

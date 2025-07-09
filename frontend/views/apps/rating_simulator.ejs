@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>AtCoder Rating Simulator (仮)</title>
+        <script src="/static/rating_simulator.js"></script>
+    </head>
+    <body>
+        <main>
+            <h1>AtCoder Rating Simulator (仮)</h1>
+            <input type="text" id="username" placeholder="AtCoder Username" /><br />
+            <input type="radio" id="ratingAlgo" name="ratingType" value="algo" checked /><label for="ratingAlgo">Algorithm</label>
+            <input type="radio" id="ratingHeuristic" name="ratingType" value="heuristic" /><label for="ratingHeuristic">Heuristic(Short)</label>
+            <input type="radio" id="ratingHeuristicLong" name="ratingType" value="heuristic" /><label for="ratingHeuristicLong">Heuristic(Long)</label>
+            <br class="divider" />
+            <span class="divider"></span>
+            <input type="radio" id="timesx1" name="contestTimes" value="1" checked /><label for="timesx1">×1</label>
+            <input type="radio" id="timesx2" name="contestTimes" value="2" /><label for="timesx2">×2</label>
+            <input type="radio" id="timesx3" name="contestTimes" value="3" /><label for="timesx3">×3</label>
+            <input type="radio" id="timesx5" name="contestTimes" value="5" /><label for="timesx5">×5</label>
+            <input type="radio" id="timesx10" name="contestTimes" value="10" /><label for="timesx10">×10</label>
+            <input type="radio" id="timesx100" name="contestTimes" value="100" /><label for="timesx100">×100</label>
+            <input type="radio" id="timesxCustom" name="contestTimes" value="custom" />
+            <label for="timesxCustom">custom <input type="number" id="contestTimeCustomInput" /></label><br />
+            <canvas id="ratingCanvas"></canvas>
+        </main>
+    </body>
+</html>

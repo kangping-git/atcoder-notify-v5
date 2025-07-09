@@ -60,7 +60,7 @@ export namespace ScraperContestResult {
             AtCoderScraper.logger.error(`Failed to fetch contest results for ${contestId}.`);
             return;
         }
-        const results: AtCoderResult[] = response.data;
+        const results: AtCoderResult[] = JSON.parse(response.data);
         if (!Array.isArray(results) || results.length === 0) {
             AtCoderScraper.logger.warn(`No results found for contest ${contestId}.`);
             return;
@@ -82,10 +82,10 @@ export namespace ScraperContestResult {
                 ),
             )
             .digest('hex');
-        if (contestData.resultPageHash === responseHash) {
-            AtCoderScraper.logger.info(`No new results for contest ${contestId}, skipping update.`);
-            return;
-        }
+        // if (contestData.resultPageHash === responseHash) {
+        //     AtCoderScraper.logger.info(`No new results for contest ${contestId}, skipping update.`);
+        //     return;
+        // }
         await Database.getDatabase().userRatingChangeEvent.deleteMany({
             where: {
                 contestId: contestId,
@@ -223,7 +223,7 @@ export namespace ScraperContestResult {
             AtCoderScraper.logger.error(`Failed to fetch user page for ${user}.`);
             return null;
         }
-        const userResults: AtCoderUserPerformance[] = response.data;
+        const userResults: AtCoderUserPerformance[] = JSON.parse(response.data);
         if (!Array.isArray(userResults) || userResults.length === 0) {
             AtCoderScraper.logger.warn(`No results found for user ${user} in contest ${contestId}.`);
             return null;

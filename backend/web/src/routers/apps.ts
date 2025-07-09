@@ -8,5 +8,8 @@ router.get('/', (req, res) => {
 router.get('/users/', (req, res) => {
     res.render('apps/users');
 });
+router.get('/rating-simulator/', (req, res) => {
+    res.render('apps/rating_simulator');
+});
 
 export default router;
