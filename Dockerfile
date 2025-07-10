@@ -54,7 +54,7 @@ COPY production.env .env
 RUN npx prisma generate
 
 # Build subprojects except scraping
-RUN npm run build:frontend && npm run build:backend
+RUN npm run build:frontend:release && npm run build:backend
 
 
 
