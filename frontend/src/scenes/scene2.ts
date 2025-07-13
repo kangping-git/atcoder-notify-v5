@@ -17,137 +17,87 @@ const featureExplains: Record<string, FeatureExplain> = {
     notify: {
         title: 'Submission Realtime Notify',
         subtitle: 'Know your results the instant they arrive.',
-        description:
-            'Receive <strong>instant alerts</strong> for every submission (AC, WA, TLE, etc.), so you’ll always be on top of your performance.',
+        description: 'Receive <strong>instant alerts</strong> for every submission (AC, WA, TLE, etc.), so you’ll always be on top of your performance.',
     },
     web_dash: {
         title: 'Web Dashboard',
         subtitle: 'All your stats in one sleek interface.',
-        description:
-            'Browse your contest history, track <strong>rating changes over time</strong>, and visualize your progress with intuitive charts.',
+        description: 'Browse your contest history, track <strong>rating changes over time</strong>, and visualize your progress with intuitive charts.',
     },
     custom: {
         title: 'Customization',
         subtitle: 'Notifications your way.',
-        description:
-            'Fine-tune where and when you get alerts—Discord, Slack, or email—with <strong>flexible filters</strong> and scheduling options.',
+        description: 'Fine-tune where and when you get alerts—Discord, Slack, or email—with <strong>flexible filters</strong> and scheduling options.',
     },
 };
 
 let isSmartphone = false;
 
 window.addEventListener('load', () => {
-    isSmartphone = window.innerWidth <= 600;
-    gsap.set('#scene2 h2', { opacity: 1 });
-    gsap.set('#scene2 #feature-list', { opacity: 1 });
-    const split = SplitText.create('#scene2 h2', { type: 'chars' });
-    const splitFeatureList = SplitText.create('#scene2 #feature-list', { type: 'words,lines' });
-    gsap.timeline({
-        scrollTrigger: {
-            trigger: '#scene2 h2',
-            start: 'top 80%',
-        },
-    })
-        .fromTo(
-            split.chars,
-            {
-                y: '200px',
+    isSmartphone = window.innerWidth <= 768;
+    if (isSmartphone) {
+        gsap.set('#scene2 h2', { opacity: 1 });
+        gsap.set('#scene2 #feature-list', { opacity: 1 });
+        gsap.set('#scene2 #feature-list li', { textAlign: 'center' });
+        gsap.set('#feature-view', {
+            width: '100%',
+            height: '0vh',
+            position: 'absolute',
+            overflow: 'hidden',
+            top: '30vh',
+            paddingBottom: '0px',
+        });
+        const split = SplitText.create('#scene2 h2', { type: 'chars' });
+        const splitFeatureList = SplitText.create('#scene2 #feature-list', { type: 'lines' });
+        gsap.timeline({
+            scrollTrigger: {
+                trigger: '#scene2 h2',
+                start: 'top 80%',
             },
-            {
-                duration: 0.5,
-                x: '-300px',
-                y: '50px',
-                stagger: 0.05,
-                opacity: 1,
-                ease: 'power3.out',
-            },
-        )
-        .from(splitFeatureList.lines, {
-            duration: 0.5,
-            y: '50px',
-            stagger: 0.2,
-            opacity: 0,
-            ease: 'power3.out',
-        });
-    let isHidden = true;
-    let nowActiveElement: HTMLElement | null = null;
-    document.querySelectorAll('#scene2 #feature-list li').forEach((li) => {
-        const featureId = li.getAttribute('data-item') || '';
-        // Create an arrow element and append it to each list item
-        const arrow = document.createElement('span');
-        arrow.textContent = '→';
-        arrow.style.display = 'inline-block';
-        arrow.style.marginLeft = '8px';
-        li.appendChild(arrow);
-        gsap.set(arrow, { opacity: 0.5 });
-        // Animate the arrow to slide horizontally on hover
-        const animation = gsap.to(arrow, {
-            paused: true,
-            duration: 0.2,
-            x: isSmartphone ? 10 : 30,
-            opacity: 1,
-            ease: 'power3.out',
-        });
-        li.addEventListener('mouseenter', () => {
-            animation.play();
-        });
-        li.addEventListener('mouseleave', () => {
-            animation.reverse();
-        });
-        li.addEventListener('click', () => {
-            if (isHidden) {
-                gsap.to(document.getElementById('feature-view'), {
+        })
+            .fromTo(
+                split.chars,
+                {
+                    y: '200px',
+                },
+                {
+                    duration: 0.5,
+                    x: '0px',
+                    y: '50px',
+                    stagger: 0.05,
+                    opacity: 1,
+                    ease: 'power3.out',
+                },
+            )
+            .fromTo(
+                splitFeatureList.lines,
+                {
+                    y: '-50px',
+                    opacity: 0,
+                },
+                {
                     duration: 0.5,
                     opacity: 1,
-                    width: '50vw',
-                    ease: 'power1.out',
-                });
-                document.getElementById('feature-title')!.innerHTML =
-                    featureExplains[featureId].title;
-                document.getElementById('feature-description')!.innerHTML =
-                    featureExplains[featureId].description;
-                const featureTitleSplit = SplitText.create('#feature-title', { type: 'words' });
-                const featureDescriptionSplit = SplitText.create('#feature-description', {
-                    type: 'words',
-                });
-                gsap.fromTo(
-                    featureTitleSplit.words.concat(featureDescriptionSplit.words),
-                    {
-                        transform: 'rotateX(90deg)',
-                        opacity: 0,
-                    },
-                    {
-                        delay: 0.5,
-                        duration: 0.3,
-                        transform: 'rotateX(0deg)',
-                        stagger: 0.02,
-                        opacity: 1,
-                        ease: 'power3.out',
-                    },
-                );
-                gsap.to(li, {
-                    textShadow: '0px 0px 5px #ccc',
-                    duration: 0.5,
-                });
-
-                isHidden = false;
-            } else {
-                const featureTitleSplit = SplitText.create('#feature-title', { type: 'words' });
-                const featureDescriptionSplit = SplitText.create('#feature-description', {
-                    type: 'words',
-                });
-                gsap.to(featureTitleSplit.words.concat(featureDescriptionSplit.words), {
-                    duration: 0.3,
-                    transform: 'rotateX(90deg)',
-                    stagger: 0.02,
-                    opacity: 0,
+                    y: '-150px',
+                    stagger: 0.2,
                     ease: 'power3.out',
-                }).eventCallback('onComplete', () => {
-                    document.getElementById('feature-title')!.innerHTML =
-                        featureExplains[featureId].title;
-                    document.getElementById('feature-description')!.innerHTML =
-                        featureExplains[featureId].description;
-
+                },
+            );
+        let isHidden = true;
+        let nowActiveElement: HTMLElement | null = null;
+        document.querySelectorAll('#scene2 #feature-list li').forEach((li) => {
+            const featureId = li.getAttribute('data-item') || '';
+            li.addEventListener('click', () => {
+                if (isHidden) {
+                    gsap.to('#feature-view', {
+                        duration: 0.5,
+                        opacity: 1,
+                        height: '40vh',
+                        paddingBottom: '50px',
+                        ease: 'power1.out',
+                    });
+                    document.getElementById('feature-title')!.innerHTML = featureExplains[featureId].title;
+                    document.getElementById('feature-description')!.innerHTML = featureExplains[featureId].description;
                     const featureTitleSplit = SplitText.create('#feature-title', { type: 'words' });
                     const featureDescriptionSplit = SplitText.create('#feature-description', {
                         type: 'words',
@@ -159,6 +109,7 @@ window.addEventListener('load', () => {
                             opacity: 0,
                         },
                         {
+                            delay: 0.5,
                             duration: 0.3,
                             transform: 'rotateX(0deg)',
                             stagger: 0.02,
@@ -166,18 +117,197 @@ window.addEventListener('load', () => {
                             ease: 'power3.out',
                         },
                     );
-                });
+                    gsap.to(li, {
+                        textShadow: '0px 0px 5px #ccc',
+                        duration: 0.5,
+                    });
 
-                gsap.to(nowActiveElement, {
-                    textShadow: '0px 0px 10px rgba(0, 0, 0, 0)',
-                    duration: 0.5,
-                });
-                gsap.to(li, {
-                    textShadow: '0px 0px 5px #ccc',
-                    duration: 0.5,
-                });
-            }
-            nowActiveElement = li as HTMLElement;
+                    isHidden = false;
+                } else {
+                    const featureTitleSplit = SplitText.create('#feature-title', { type: 'words' });
+                    const featureDescriptionSplit = SplitText.create('#feature-description', {
+                        type: 'words',
+                    });
+                    gsap.to(featureTitleSplit.words.concat(featureDescriptionSplit.words), {
+                        duration: 0.3,
+                        transform: 'rotateX(90deg)',
+                        stagger: 0.02,
+                        opacity: 0,
+                        ease: 'power3.out',
+                    }).eventCallback('onComplete', () => {
+                        document.getElementById('feature-title')!.innerHTML = featureExplains[featureId].title;
+                        document.getElementById('feature-description')!.innerHTML = featureExplains[featureId].description;
+
+                        const featureTitleSplit = SplitText.create('#feature-title', { type: 'words' });
+                        const featureDescriptionSplit = SplitText.create('#feature-description', {
+                            type: 'words',
+                        });
+                        gsap.fromTo(
+                            featureTitleSplit.words.concat(featureDescriptionSplit.words),
+                            {
+                                transform: 'rotateX(90deg)',
+                                opacity: 0,
+                            },
+                            {
+                                duration: 0.3,
+                                transform: 'rotateX(0deg)',
+                                stagger: 0.02,
+                                opacity: 1,
+                                ease: 'power3.out',
+                            },
+                        );
+                    });
+
+                    gsap.to(nowActiveElement, {
+                        textShadow: '0px 0px 10px rgba(0, 0, 0, 0)',
+                        duration: 0.5,
+                    });
+                    gsap.to(li, {
+                        textShadow: '0px 0px 5px #ccc',
+                        duration: 0.5,
+                    });
+                }
+                nowActiveElement = li as HTMLElement;
+            });
         });
-    });
+    } else {
+        gsap.set('#scene2 h2', { opacity: 1 });
+        gsap.set('#scene2 #feature-list', { opacity: 1 });
+        const split = SplitText.create('#scene2 h2', { type: 'chars' });
+        const splitFeatureList = SplitText.create('#scene2 #feature-list', { type: 'words,lines' });
+        gsap.timeline({
+            scrollTrigger: {
+                trigger: '#scene2 h2',
+                start: 'top 80%',
+            },
+        })
+            .fromTo(
+                split.chars,
+                {
+                    y: '200px',
+                },
+                {
+                    duration: 0.5,
+                    x: '-300px',
+                    y: '50px',
+                    stagger: 0.05,
+                    opacity: 1,
+                    ease: 'power3.out',
+                },
+            )
+            .from(splitFeatureList.lines, {
+                duration: 0.5,
+                y: '50px',
+                stagger: 0.2,
+                opacity: 0,
+                ease: 'power3.out',
+            });
+        let isHidden = true;
+        let nowActiveElement: HTMLElement | null = null;
+        document.querySelectorAll('#scene2 #feature-list li').forEach((li) => {
+            const featureId = li.getAttribute('data-item') || '';
+            // Create an arrow element and append it to each list item
+            const arrow = document.createElement('span');
+            arrow.textContent = '→';
+            arrow.style.display = 'inline-block';
+            arrow.style.marginLeft = '8px';
+            li.appendChild(arrow);
+            gsap.set(arrow, { opacity: 0.5 });
+            // Animate the arrow to slide horizontally on hover
+            const animation = gsap.to(arrow, {
+                paused: true,
+                duration: 0.2,
+                x: isSmartphone ? 10 : 30,
+                opacity: 1,
+                ease: 'power3.out',
+            });
+            li.addEventListener('mouseenter', () => {
+                animation.play();
+            });
+            li.addEventListener('mouseleave', () => {
+                animation.reverse();
+            });
+            li.addEventListener('click', () => {
+                if (isHidden) {
+                    gsap.to(document.getElementById('feature-view'), {
+                        duration: 0.5,
+                        opacity: 1,
+                        width: '50vw',
+                        ease: 'power1.out',
+                    });
+                    document.getElementById('feature-title')!.innerHTML = featureExplains[featureId].title;
+                    document.getElementById('feature-description')!.innerHTML = featureExplains[featureId].description;
+                    const featureTitleSplit = SplitText.create('#feature-title', { type: 'words' });
+                    const featureDescriptionSplit = SplitText.create('#feature-description', {
+                        type: 'words',
+                    });
+                    gsap.fromTo(
+                        featureTitleSplit.words.concat(featureDescriptionSplit.words),
+                        {
+                            transform: 'rotateX(90deg)',
+                            opacity: 0,
+                        },
+                        {
+                            delay: 0.5,
+                            duration: 0.3,
+                            transform: 'rotateX(0deg)',
+                            stagger: 0.02,
+                            opacity: 1,
+                            ease: 'power3.out',
+                        },
+                    );
+                    gsap.to(li, {
+                        textShadow: '0px 0px 5px #ccc',
+                        duration: 0.5,
+                    });
+
+                    isHidden = false;
+                } else {
+                    const featureTitleSplit = SplitText.create('#feature-title', { type: 'words' });
+                    const featureDescriptionSplit = SplitText.create('#feature-description', {
+                        type: 'words',
+                    });
+                    gsap.to(featureTitleSplit.words.concat(featureDescriptionSplit.words), {
+                        duration: 0.3,
+                        transform: 'rotateX(90deg)',
+                        stagger: 0.02,
+                        opacity: 0,
+                        ease: 'power3.out',
+                    }).eventCallback('onComplete', () => {
+                        document.getElementById('feature-title')!.innerHTML = featureExplains[featureId].title;
+                        document.getElementById('feature-description')!.innerHTML = featureExplains[featureId].description;
+
+                        const featureTitleSplit = SplitText.create('#feature-title', { type: 'words' });
+                        const featureDescriptionSplit = SplitText.create('#feature-description', {
+                            type: 'words',
+                        });
+                        gsap.fromTo(
+                            featureTitleSplit.words.concat(featureDescriptionSplit.words),
+                            {
+                                transform: 'rotateX(90deg)',
+                                opacity: 0,
+                            },
+                            {
+                                duration: 0.3,
+                                transform: 'rotateX(0deg)',
+                                stagger: 0.02,
+                                opacity: 1,
+                                ease: 'power3.out',
+                            },
+                        );
+                    });
+
+                    gsap.to(nowActiveElement, {
+                        textShadow: '0px 0px 10px rgba(0, 0, 0, 0)',
+                        duration: 0.5,
+                    });
+                    gsap.to(li, {
+                        textShadow: '0px 0px 5px #ccc',
+                        duration: 0.5,
+                    });
+                }
+                nowActiveElement = li as HTMLElement;
+            });
+        });
+    }
 });

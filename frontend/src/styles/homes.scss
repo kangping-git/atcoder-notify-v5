@@ -47,7 +47,7 @@ span#subtitle {
         opacity: 0;
 
         li {
-            line-height: 50px;
+            line-height: 30px;
             text-align: left;
             cursor: pointer;
         }
@@ -121,7 +121,6 @@ span#subtitle {
             padding: 5px;
             border-radius: 5px;
             background-color: rgba(#000, 0.5);
-
             h3 {
                 font-size: 20pt;
                 margin: 0;
@@ -140,6 +139,19 @@ span#subtitle {
                 margin: 0;
                 text-align: center;
                 color: $TEXT_COLOR;
+            }
+            @media (max-width: 600px) {
+                h3 {
+                    font-size: 16pt;
+
+                    .subtitle {
+                        font-size: 12pt;
+                    }
+                }
+
+                p {
+                    font-size: 10pt;
+                }
             }
         }
     }
@@ -170,17 +182,5 @@ span#subtitle {
         width: 90%;
         height: auto;
         margin-bottom: 20px;
-
-        h3 {
-            font-size: 18pt;
-
-            .subtitle {
-                font-size: 14pt;
-            }
-        }
-
-        p {
-            font-size: 12pt;
-        }
     }
 }
