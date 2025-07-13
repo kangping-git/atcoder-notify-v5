@@ -1,9 +1,12 @@
 import { config } from 'dotenv';
+import { Database } from './database';
 import path from 'path';
 config({ path: path.join(__dirname, '../../../.env') });
+Database.initDatabase();
 
 import { Client, GatewayIntentBits } from 'discord.js';
 import { commandHandlers, deployCommands } from './deployCommand';
+import { connectSSE } from './live';
 
 const client = new Client({
     intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
@@ -11,6 +14,7 @@ const client = new Client({
 client.once('ready', async () => {
     console.log(`Logged in as ${client.user?.tag}!`);
     client.application?.commands.set(await deployCommands());
+    connectSSE();
 });
 
 client.on('interactionCreate', async (interaction) => {

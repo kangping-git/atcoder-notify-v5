@@ -16,14 +16,13 @@ function createMasterSSE() {
         console.log('[MasterSSE] connection opened');
     });
 
-    MasterSSE.addEventListener('message', (event) => {
+    MasterSSE.addEventListener('submission', (event) => {
         console.log('[MasterSSE] received:', event.data);
         sseConnections.forEach((res) => res.write(`data: ${event.data}\n\n`));
     });
 
     MasterSSE.addEventListener('error', (err) => {
         console.error('[MasterSSE] error:', err);
-        // 自動再接続前にクローズしておくとスッキリします
         MasterSSE.close();
         setTimeout(createMasterSSE, 3000);
     });

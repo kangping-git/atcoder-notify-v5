@@ -184,3 +184,9 @@ model SessionData {
 
   expiresAt   DateTime
 }
+
+model discordServerConfig {
+  id                     String @unique
+  ac_notify_channel      String?
+  contest_notify_channel String?
+}
