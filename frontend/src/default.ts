@@ -17,7 +17,8 @@ window.addEventListener('load', () => {
     if (!ctx) {
         return;
     }
-    let numDots = 2000;
+    let numDots = Math.floor((window.innerHeight * window.innerWidth) / 400);
+    console.log(numDots);
     const dots = Array.from({ length: numDots }, initDot);
     window.addEventListener('resize', () => {
         canvas.width = window.innerWidth;
@@ -121,15 +122,14 @@ window.addEventListener('load', () => {
 
     tick();
 
-    // header for mobile
     const nav = document.getElementById('nav-mobile') as HTMLDivElement;
-    // 初期状態で600px以下ならliを回転させる
     if (window.matchMedia('(max-width: 600px)').matches) {
-        gsap.set('#nav-mobile li', { transform: 'rotateX(90deg)', opacity: 0 });
+        gsap.set('#nav-mobile li', { transform: 'rotateX(90deg)', opacity: 0, display: 'none' });
     }
     window.matchMedia('(max-width: 600px)').addEventListener('change', (e) => {
         if (e.matches) {
-            gsap.set('#nav-mobile li', { transform: 'rotateX(90deg)', opacity: 0 });
+            gsap.set('#nav-mobile', { display: 'none' });
+            gsap.set('#nav-mobile li', { transform: 'rotateX(90deg)', opacity: 0, display: 'none' });
         } else {
             gsap.set('#nav-mobile li', { display: 'block' });
             gsap.set('#nav-mobile li', { transform: 'rotateX(0deg)', opacity: 1 });
@@ -143,6 +143,7 @@ window.addEventListener('load', () => {
         document.getElementById('hamburger-button')!.classList.add('disabled');
         if (isOpen) {
             gsap.set('#nav-mobile li', { display: 'block' });
+            gsap.set('#nav-mobile', { display: 'block' });
             gsap.to('#nav-mobile li', {
                 duration: 0.5,
                 transform: 'rotateX(0deg)',
@@ -159,6 +160,7 @@ window.addEventListener('load', () => {
                 stagger: 0.1,
             }).eventCallback('onComplete', () => {
                 gsap.set('#nav-mobile li', { transform: 'rotateX(0deg)', display: 'none' });
+                gsap.set('#nav-mobile', { display: 'none' });
                 document.getElementById('hamburger-button')!.classList.remove('disabled');
             });
         }
