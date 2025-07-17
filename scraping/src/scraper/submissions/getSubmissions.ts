@@ -294,7 +294,6 @@ export async function getSubmission(contestId: string, submissionId: string) {
         return null;
     }
     const $ = cheerio.load(response.data);
-    const code = $('#submission-code').text().trim();
 
     // Parse the submission info panel.
     const info: Partial<Submission> & { time?: number; memory?: number } = {};
@@ -356,9 +355,6 @@ export async function getSubmission(contestId: string, submissionId: string) {
             }
         }
     });
-
-    // (Optionally, attach the code if you need it later)
-    // info.code = code;
 
     if (
         info.status === SubmissionStatus.CE ||

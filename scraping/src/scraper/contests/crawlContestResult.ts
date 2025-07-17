@@ -82,10 +82,10 @@ export namespace ScraperContestResult {
                 ),
             )
             .digest('hex');
-        // if (contestData.resultPageHash === responseHash) {
-        //     AtCoderScraper.logger.info(`No new results for contest ${contestId}, skipping update.`);
-        //     return;
-        // }
+        if (contestData.resultPageHash === responseHash) {
+            AtCoderScraper.logger.info(`No new results for contest ${contestId}, skipping update.`);
+            return;
+        }
         await Database.getDatabase().userRatingChangeEvent.deleteMany({
             where: {
                 contestId: contestId,

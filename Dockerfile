@@ -49,15 +49,11 @@ COPY status ./status
 COPY fonts ./fonts
 COPY docs ./docs
 COPY prisma ./prisma
-COPY judgement ./judgement
 COPY production.env .env
 RUN npx prisma generate
 
 # Build subprojects except scraping
 RUN npm run build:frontend:release && npm run build:backend
 
-
-
 EXPOSE 4080
 CMD ["npm", "start"]
-

@@ -3,6 +3,7 @@ import { EmbedBuilder } from 'discord.js';
 const ErrorCodes: Record<number, string> = {
     100: "Required parameter ':param:' is null.",
     101: 'This command can only be executed within a server.',
+    102: "Can't find an atcoder user ':user:'",
     999: 'Unknown Error',
 };
 
