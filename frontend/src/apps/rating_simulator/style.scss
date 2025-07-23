@@ -76,6 +76,15 @@ main {
             height: 35vh;
         }
     }
+    #estimator_table {
+        margin-left: auto;
+        margin-right: auto;
+        input[type='number'] {
+            padding: 5px;
+            border-radius: 5px;
+            border: 1px gray solid;
+        }
+    }
 }
 br.divider {
     display: none;

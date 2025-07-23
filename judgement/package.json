@@ -9,8 +9,5 @@
         "build": "concurrently \"npm run build:judge_server\" \"npm run build:judge_worker\"",
         "start": "npm run start:judge_server",
         "build:watch": "concurrently \"npm run build:watch:judge_server\" \"npm run build:watch:judge_worker\""
-    },
-    "dependencies": {
-        "generic-pool": "^3.9.0"
     }
 }

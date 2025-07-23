@@ -24,6 +24,18 @@
             <input type="radio" id="timesxCustom" name="contestTimes" value="custom" />
             <label for="timesxCustom">custom <input type="number" id="contestTimeCustomInput" /></label><br />
             <canvas id="ratingCanvas"></canvas>
+            <div id="estimator" style="display: none">
+                <table id="estimator_table">
+                    <tr>
+                        <td>Rating:</td>
+                        <td><input id="rating" type="number" value="0" /></td>
+                    </tr>
+                    <tr>
+                        <td>Performance:</td>
+                        <td><input id="performance" type="number" value="0" /></td>
+                    </tr>
+                </table>
+            </div>
         </main>
     </body>
 </html>

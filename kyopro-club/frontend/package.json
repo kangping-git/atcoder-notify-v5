@@ -1,0 +1,7 @@
+{
+    "scripts": {
+        "build": "webpack",
+        "build:release": "webpack --mode production",
+        "build:watch": "webpack --watch"
+    }
+}

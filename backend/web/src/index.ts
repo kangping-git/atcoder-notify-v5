@@ -23,6 +23,9 @@ app.use(
     expressSession({
         cookie: {
             maxAge: 31 * 24 * 60 * 60 * 1000,
+            httpOnly: true,
+            domain: process.env.DOMAIN,
+            path: '/',
         },
         secret: process.env.SESSION_SECRET_KEY || 'secret',
         resave: true,
@@ -71,10 +74,6 @@ import appsRouter from './routers/apps';
 app.use('/apps', appsRouter);
 import apiRouter from './routers/api';
 app.use('/api/v1', apiRouter);
-import judgeRouter from './routers/judge';
-if (!process.env.PRODUCTION) {
-    app.use('/judge', judgeRouter);
-}
 
 import { responseError } from './error';
 import { Database } from './database';

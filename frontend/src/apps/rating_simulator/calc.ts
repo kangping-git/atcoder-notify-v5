@@ -195,6 +195,51 @@ export async function draw(
     if (maxRating < 0) {
         maxRating = 0;
     }
+    let ratingElement = document.getElementById('rating') as HTMLInputElement;
+    let performanceElement = document.getElementById('performance') as HTMLInputElement;
+    if (window.isUserChanged) {
+        ratingElement.value = String(Math.floor((nowRating + 1) / 400) * 400 + 400);
+        window.isRatingChanged = true;
+    }
+    if (window.isRatingChanged) {
+        let goalRating = parseFloat(ratingElement.value);
+        ratingElement.style.color = getRatingColor(goalRating).color;
+        if (goalRating <= 0) {
+            performanceElement.value = String(Number.MAX_SAFE_INTEGER * -1);
+            performanceElement.style.color = getRatingColor(0).color;
+        } else {
+            let l = 0;
+            let r = 400;
+            while (calcRating(r) < goalRating) {
+                l = r;
+                r *= 2;
+            }
+            r += 100;
+            l -= 100;
+            while (r - l > 0.005) {
+                let mid = (l + r) / 2;
+                if (calcRating(mid) < goalRating) {
+                    l = mid;
+                } else {
+                    r = mid;
+                }
+            }
+            performanceElement.value = String(((l + r) / 2).toFixed(2));
+            performanceElement.style.color = getRatingColor((l + r) / 2).color;
+        }
+    } else if (window.isPerformanceChanged) {
+        let performance = parseFloat(performanceElement.value);
+        performanceElement.style.color = getRatingColor(performance).color;
+        if (performance <= 0) {
+            ratingElement.value = '0';
+        }
+        let rating = calcRating(performance);
+        ratingElement.value = String(rating.toFixed(2));
+        ratingElement.style.color = getRatingColor(rating).color;
+    }
+    window.isRatingChanged = false;
+    window.isPerformanceChanged = false;
+    window.isUserChanged = false;
     let nowRatingYPos = 5 + drawingHeight - ((nowRating - drawMin) * drawingHeight) / (drawMax - drawMin);
     let maxRatingYPos = 5 + drawingHeight - ((maxRating - drawMin) * drawingHeight) / (drawMax - drawMin);
     ctx.strokeStyle = '#f00';
