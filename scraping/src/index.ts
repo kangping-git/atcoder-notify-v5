@@ -10,6 +10,7 @@ import { addSubmissionListener } from './scraper/submissions/getSubmissions';
 import { config } from 'dotenv';
 import path from 'path';
 import { ScraperContestResult } from './scraper/contests/crawlContestResult';
+import { rebuildUsersTable } from './build_db/users';
 config({ path: path.join(__dirname, '../../.env') });
 
 export namespace Main {
@@ -23,7 +24,7 @@ export namespace Main {
 
         // Start Background tasks
         logger.info('Starting background tasks...');
-        console.log(process.env.SOCK5_PROXY);
+        // console.log(process.env.SOCK5_PROXY);
         Proxy.initProxy(process.env.SOCK5_PROXY!);
         await Database.initDatabase();
         // rebuildUsersTable();

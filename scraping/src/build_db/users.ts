@@ -14,27 +14,26 @@ export async function rebuildUsersTable() {
                 id: {
                     gte: cursor,
                 },
-                ratings: {
-                    some: {
-                        newRating: 0,
-                    },
-                },
             },
             take: batchSize,
             orderBy: {
                 id: 'asc',
+            },
+            select: {
+                ratings: true,
+                country: true,
+                id: true,
             },
         });
         if (users.length === 0) {
             break;
         }
         for (const user of users) {
-            const history = await Database.getDatabase().userRatingChangeEvent.findMany({
-                where: {
-                    userId: user.id,
-                },
-            });
+            const history = user.ratings;
             history.sort((a, b) => contestEndTimes.get(a.contestId)!.getTime() - contestEndTimes.get(b.contestId)!.getTime());
+            if (user.id == 18353) {
+                console.log(history);
+            }
             let algoRating = -1;
             let heuristicRating = -1;
             for (const change of history) {
