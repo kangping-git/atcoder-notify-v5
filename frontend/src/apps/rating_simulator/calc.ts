@@ -92,7 +92,7 @@ export async function draw(
 
     let data = cache[username];
     if (!data) {
-        data = await (await fetch(`/api/v1/users/${username}/history`)).json();
+        data = await (await fetch(`/api/v1/users/detail/${username}/history`)).json();
         if (!data || !Array.isArray(data)) {
             data = [];
         }

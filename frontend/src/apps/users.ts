@@ -11,6 +11,15 @@ export const COLORS: Array<{ rating: number; color: string; alpha: number }> = [
     { rating: 2400, color: '#FF8000', alpha: 0.2 },
     { rating: 2800, color: '#FF0000', alpha: 0.1 },
 ];
+function mapRatingInv(rating: number) {
+    if (rating <= 0) {
+        return mapRatingInv(0.5);
+    }
+    if (rating < 400) {
+        return 400 * (1 + Math.log(rating / 400));
+    }
+    return rating;
+}
 COLORS.reverse();
 export function getColorByRating(rating: number): string {
     const color = COLORS.find((c) => rating >= c.rating);
@@ -40,8 +49,17 @@ let zIndex = 1000;
 declare global {
     interface Window {
         openUserHistory: (user: string) => void;
+        onFilterApplied: (handler: () => any) => void;
+        dispatchFilterApplied: (handler: () => any) => void;
     }
 }
+const filterAppliedEvents = new Set<() => any>();
+window.onFilterApplied = (handler) => {
+    filterAppliedEvents.add(handler);
+};
+window.dispatchFilterApplied = (handler) => {
+    filterAppliedEvents.delete(handler);
+};
 const windowObj = window;
 export function handleWindow({
     window,
@@ -253,11 +271,14 @@ function applyFilters() {
         .then((response) => response.json())
         .then((data) => {
             statsWindow.querySelector('#statsContent')!.innerHTML = `<span>Total Users: ${data.count}</span>`;
-            const histogramOpenerContainer = statsWindow.querySelector('#histogram-opener-container') as HTMLDivElement;
+            const histogramOpenerContainer = statsWindow.querySelector('#opener-container') as HTMLDivElement;
             if (data.count > 0) {
                 histogramOpenerContainer.style.display = 'block';
             } else {
                 histogramOpenerContainer.style.display = 'none';
+            }
+            for (let handler of filterAppliedEvents) {
+                handler();
             }
         });
 }
@@ -390,8 +411,8 @@ async function createUserStatisticsWindow(userName: string, x: number, y: number
             openedUserSet.delete(userName);
         },
     });
-    const baseData = await (await fetch(`/api/v1/users/${encodeURIComponent(userName)}/`)).json();
-    const advanceData = await (await fetch(`/api/v1/users/${encodeURIComponent(userName)}/stats/`)).json();
+    const baseData = await (await fetch(`/api/v1/users/detail/${encodeURIComponent(userName)}/`)).json();
+    const advanceData = await (await fetch(`/api/v1/users/detail/${encodeURIComponent(userName)}/stats/`)).json();
     const statsContent = userStatsWindow.querySelector('#userStatsContent')!;
     statsContent.innerHTML = `
             <table class="user-stats-table">
@@ -489,7 +510,7 @@ function openUserAlgoHistory(user: string) {
     algoHistoryWindow.innerHTML = `
             <h2>${user}'s Algo History</h2>
             <div class="algo-history-content">
-                <img src="/api/v1/users/${encodeURIComponent(user)}/rating.png" alt="${user}'s Algo History" />
+                <img src="/api/v1/users/detail/${encodeURIComponent(user)}/rating.png" alt="${user}'s Algo History" />
             </div>`;
     document.body.appendChild(algoHistoryWindow);
     handleWindow({
@@ -536,7 +557,7 @@ function openUserHeuristicHistory(user: string) {
     HeuristicHistoryWindow.innerHTML = `
             <h2>${user}'s Heuristic History</h2>
             <div class="heuristic-history-content">
-                <img src="/api/v1/users/${encodeURIComponent(user)}/rating.png?isHeuristic=true" alt="${user}'s Heuristic History" />
+                <img src="/api/v1/users/detail/${encodeURIComponent(user)}/rating.png?isHeuristic=true" alt="${user}'s Heuristic History" />
             </div>`;
     document.body.appendChild(HeuristicHistoryWindow);
     handleWindow({
@@ -592,7 +613,7 @@ function openUserSubmissions(user: string) {
     });
     let submissionCursor = '';
     function getSubmissions() {
-        fetch(`/api/v1/users/${encodeURIComponent(user)}/submissions?cursor=${submissionCursor}&limit=200`)
+        fetch(`/api/v1/users/detail/${encodeURIComponent(user)}/submissions?cursor=${submissionCursor}&limit=200`)
             .then((response) => response.json())
             .then((data) => {
                 const submissionsTableBody = submissionsWindow.querySelector('#submissionsTableBody') as HTMLTableElement;
@@ -713,7 +734,7 @@ async function openUserHistory(user: string) {
         isOverflowScroll: true,
     });
 
-    const userHistory = await (await fetch(`/api/v1/users/${user}/history`)).json();
+    const userHistory = await (await fetch(`/api/v1/users/detail/${user}/history`)).json();
     userHistory.reverse();
     displayHistoryTab(true);
 }
@@ -725,22 +746,23 @@ statsWindow.innerHTML = `
         <h2>User Statistics</h2>
         <div class="stats-content">
             <p id="statsContent">Loading...</p>
-            <div id="histogram-opener-container">
+            <div id="opener-container">
                 <button id="openAlgoHistogram">Algo Histogram</button>
                 <button id="openHeuristicHistogram">Heuristic Histogram</button>
+                <button id="openDeviation">Deviation Calculator</button>
             </div>
         </div>
         <button id="open" style="display: none;">+</button>
         <button id="backPage">Back Page</button>
         <button id="nextPage">Next Page</button>`;
-(statsWindow.querySelector('#histogram-opener-container') as HTMLDivElement)!.style.display = 'none';
+(statsWindow.querySelector('#opener-container') as HTMLDivElement)!.style.display = 'none';
 let isOpenedAlgoHistogram = false;
 (statsWindow.querySelector('#openAlgoHistogram') as HTMLButtonElement)!.addEventListener('click', () => {
     if (isOpenedAlgoHistogram) {
         return;
     }
     isOpenedAlgoHistogram = true;
-    let windowElement = openHistogram(true);
+    let { windowElement, onClose } = openHistogram(true);
     handleWindow({
         window: windowElement,
         x: 5,
@@ -750,6 +772,7 @@ let isOpenedAlgoHistogram = false;
         height: 460,
         onClose: () => {
             isOpenedAlgoHistogram = false;
+            onClose();
         },
     });
 });
@@ -759,7 +782,7 @@ let isOpenedHeuristicHistogram = false;
         return;
     }
     isOpenedHeuristicHistogram = true;
-    let windowElement = openHistogram(false);
+    let { windowElement, onClose } = openHistogram(false);
     handleWindow({
         window: windowElement,
         x: 5,
@@ -769,6 +792,183 @@ let isOpenedHeuristicHistogram = false;
         height: 460,
         onClose: () => {
             isOpenedHeuristicHistogram = false;
+            onClose();
+        },
+    });
+});
+let isOpenedDeviation = false;
+interface DeviationAPI {
+    algoRatingAvg: number;
+    algoRatingStdDev: number;
+    algoRawRatingAvg: number;
+    algoRawRatingStdDev: number;
+    heuristicRatingAvg: number;
+    heuristicRatingStdDev: number;
+    heuristicRawRatingAvg: number;
+    heuristicRawRatingStdDev: number;
+}
+const deviationCache = new Map<string, DeviationAPI>();
+const userRatingCache = new Map<string, { algo: number; heuristic: number }>();
+(statsWindow.querySelector('#openDeviation') as HTMLButtonElement)!.addEventListener('click', () => {
+    if (isOpenedDeviation) {
+        return;
+    }
+    isOpenedDeviation = true;
+    let windowElement = document.createElement('div');
+    windowElement.innerHTML = `
+    <h2>Calc Deviation</h2>
+    <div>
+        <div class="tabs">
+            <span class="tab-select active" id="deviation-tab-username">With Username</span>
+            <span class="tab-select" id="deviation-tab-rating">With Rating</span>
+        </div>
+        <div id="deviation-username-input">
+            <input type="text" id="deviation-username-input-elem">
+        </div>
+        <div id="deviation-rating-input">
+            <input type="number" id="deviation-rating-input-elem">
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>Rating</th>
+                    <th>T-Score</th>
+                    <th>Avg.</th>
+                    <th>StdDev</th>
+                </tr>
+            </thead>
+            <tbody id="deviation_tbody"></tbody>
+        </table>
+    </div>`;
+    const deviationTab = windowElement.querySelector('#deviation-tab-username') as HTMLSpanElement;
+    const ratingTab = windowElement.querySelector('#deviation-tab-rating') as HTMLSpanElement;
+    const deviationUserInput = windowElement.querySelector('#deviation-username-input-elem') as HTMLInputElement;
+    const deviationRatingInput = windowElement.querySelector('#deviation-rating-input-elem') as HTMLInputElement;
+    let isOpenUsernameTab = true;
+    deviationTab.addEventListener('click', () => {
+        deviationTab.classList.add('active');
+        ratingTab.classList.remove('active');
+        isOpenUsernameTab = true;
+        updateWindow();
+    });
+    ratingTab.addEventListener('click', () => {
+        ratingTab.classList.add('active');
+        deviationTab.classList.remove('active');
+        isOpenUsernameTab = false;
+        updateWindow();
+    });
+    document.body.appendChild(windowElement);
+    const deviationUsernameInputContainer = windowElement.querySelector('#deviation-username-input') as HTMLDivElement;
+    const deviationRatingInputContainer = windowElement.querySelector('#deviation-rating-input') as HTMLDivElement;
+    let timeout_id: any = null;
+    deviationUsernameInputContainer.addEventListener('input', () => {
+        if (timeout_id) clearTimeout(timeout_id);
+        timeout_id = setTimeout(() => {
+            updateWindow();
+        }, 100);
+    });
+    deviationRatingInputContainer.addEventListener('input', () => {
+        updateWindow();
+    });
+    const deviationTBody = windowElement.querySelector('#deviation_tbody') as HTMLTableElement;
+    function addRow(...args: (string | number)[]) {
+        let row = document.createElement('tr');
+        for (let i in args) {
+            let cell = document.createElement('td');
+            if (typeof args[i] == 'number') {
+                cell.innerText = args[i].toFixed(2);
+            } else {
+                cell.innerText = args[i];
+            }
+            if (i == '1') {
+                if (typeof args[i] == 'number') {
+                    cell.style.color = getColorByRating(args[i]);
+                } else {
+                    cell.style.color = getColorByRating(parseInt(args[i]));
+                }
+            }
+            row.append(cell);
+        }
+        deviationTBody.append(row);
+    }
+    async function updateWindow() {
+        if (isOpenUsernameTab) {
+            deviationUsernameInputContainer.style.display = 'block';
+            deviationRatingInputContainer.style.display = 'none';
+        } else {
+            deviationUsernameInputContainer.style.display = 'none';
+            deviationRatingInputContainer.style.display = 'block';
+        }
+        const params = new URLSearchParams(getParams());
+        const hitCache = deviationCache.get(params.toString());
+        let stats: DeviationAPI;
+        if (!hitCache) {
+            stats = await (await fetch('/api/v1/users/deviation?' + params)).json();
+            deviationCache.set(params.toString(), stats);
+        } else {
+            stats = hitCache;
+        }
+        let rating: { algo: number; heuristic: number };
+        if (isOpenUsernameTab) {
+            const username = deviationUserInput.value;
+            let hitCache = userRatingCache.get(username);
+            if (!hitCache) {
+                const response = await (await fetch('/api/v1/users/detail/' + encodeURIComponent(username))).json();
+                rating = { algo: response.algoRating || 0, heuristic: response.heuristicRating || 0 };
+                userRatingCache.set(username, rating);
+            } else {
+                rating = hitCache;
+            }
+            deviationUserInput.style.color = getColorByRating(rating.algo);
+        } else {
+            let rating_temp = parseInt(deviationRatingInput.value);
+            if (!rating_temp) rating_temp = 0;
+            rating = { algo: rating_temp, heuristic: rating_temp };
+            deviationRatingInput.style.color = getColorByRating(rating_temp);
+        }
+        deviationTBody.innerHTML = '';
+        addRow(
+            'Algorithm',
+            rating.algo.toString(),
+            ((rating.algo - stats.algoRatingAvg) / stats.algoRatingStdDev) * 10 + 50,
+            stats.algoRatingAvg,
+            stats.algoRatingStdDev,
+        );
+        addRow(
+            'Algorithm(Inner)',
+            mapRatingInv(rating.algo).toFixed(0),
+            ((mapRatingInv(rating.algo) - stats.algoRawRatingAvg) / stats.algoRawRatingStdDev) * 10 + 50,
+            stats.algoRawRatingAvg,
+            stats.algoRawRatingStdDev,
+        );
+        addRow(
+            'Heuristic',
+            rating.heuristic.toString(),
+            ((rating.heuristic - stats.heuristicRatingAvg) / stats.heuristicRatingStdDev) * 10 + 50,
+            stats.heuristicRatingAvg,
+            stats.heuristicRatingStdDev,
+        );
+        addRow(
+            'Heuristic(Inner)',
+            mapRatingInv(rating.heuristic).toFixed(0),
+            ((mapRatingInv(rating.heuristic) - stats.heuristicRawRatingAvg) / stats.heuristicRawRatingStdDev) * 10 + 50,
+            stats.heuristicRawRatingAvg,
+            stats.heuristicRawRatingStdDev,
+        );
+    }
+    updateWindow();
+    window.onFilterApplied(updateWindow);
+    handleWindow({
+        window: windowElement,
+        x: 5,
+        y: 5,
+        deletable: true,
+        width: 500,
+        height: 460,
+        onClose: () => {
+            isOpenedDeviation = false;
+            window.dispatchFilterApplied(updateWindow);
         },
     });
 });
@@ -778,7 +978,7 @@ handleWindow({
     window: statsWindow,
     x: 2,
     y: 50,
-    height: 300,
+    height: 350,
     deletable: false,
     minimum: {
         opened: (toggle) => {
@@ -792,7 +992,7 @@ handleWindow({
             (statsWindow.querySelector('#backPage') as HTMLElement).innerText = 'Back Page';
             (statsWindow.querySelector('#nextPage') as HTMLElement).innerText = 'Next Page';
             statsWindow.querySelector('#open')!.removeEventListener('click', toggle);
-            statsWindow.style.height = '300px';
+            statsWindow.style.height = '350px';
             statsWindow.style.width = '300px';
         },
         closed: (toggle) => {

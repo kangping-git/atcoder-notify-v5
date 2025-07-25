@@ -1,6 +1,6 @@
 import { COLORS, getColorByRating, getParams } from './users';
 
-export function openHistogram(isAlgo: boolean): HTMLDivElement {
+export function openHistogram(isAlgo: boolean) {
     var xAxis = [
         0, 1, 2, 3, 4, 5, 7, 9, 12, 15, 19, 25, 32, 42, 54, 69, 89, 114, 147, 188, 242, 311, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400, 1500,
         1600, 1700, 1800, 1900, 2000, 2100, 2200, 2300, 2400, 2500, 2600, 2700, 2800, 2900, 3000, 3100, 3200, 3300, 3400, 3500, 3600, 3700, 3800,
@@ -51,7 +51,6 @@ export function openHistogram(isAlgo: boolean): HTMLDivElement {
                 histogramData[index] += value._count;
             }
         });
-        console.log(histogramData);
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = 'white';
@@ -77,6 +76,7 @@ export function openHistogram(isAlgo: boolean): HTMLDivElement {
         ctx.lineWidth = 1;
         ctx.strokeRect(45, 10, canvas.width - 50, canvas.height - 50);
     }
+    window.onFilterApplied(drawHistogram);
     drawHistogram();
-    return algoHistogramWindow;
+    return { windowElement: algoHistogramWindow, onClose: () => window.dispatchFilterApplied(drawHistogram) };
 }

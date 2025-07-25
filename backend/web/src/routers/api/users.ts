@@ -1,7 +1,8 @@
+import { Prisma } from '@prisma/client';
 import { Router } from 'express';
 import { getHistoryImage, getUserRatingImage } from './images/history';
-import sharp, { bool } from 'sharp';
-import { boolean, z } from 'zod';
+import sharp from 'sharp';
+import { z } from 'zod';
 import { Database } from '../../database';
 sharp.cache({
     memory: 200,
@@ -11,7 +12,17 @@ sharp.cache({
 
 const router = Router();
 
-router.get(['/', '/count', '/histogram'], async (req, res) => {
+function mapRatingInv(rating: number) {
+    if (rating <= 0) {
+        return mapRatingInv(0.5);
+    }
+    if (rating < 400) {
+        return 400 * (1 + Math.log(rating / 400));
+    }
+    return rating;
+}
+
+router.get(['/', '/count', '/histogram', '/deviation'], async (req, res) => {
     const QuerySchema = z.object({
         q: z.string().optional(),
         country: z.string().optional(),
@@ -62,6 +73,73 @@ router.get(['/', '/count', '/histogram'], async (req, res) => {
         };
         const count = await Database.getDatabase().user.count({ where: baseWhere });
         res.json({ count });
+        return;
+    }
+    if (req.path == '/deviation') {
+        const baseWhere: any = {
+            name: q ? { contains: q } : undefined,
+            country: country || undefined,
+            algoRating: { gte: minAlgo, lte: maxAlgo },
+            heuristicRating: { gte: minHeuristic, lte: maxHeuristic },
+            lastContestTime: isActive ? { gte: twoYearsAgo } : undefined,
+        };
+        const algoRatingGroupBy = await Database.getDatabase().user.groupBy({ where: baseWhere, by: 'algoRating', _count: true });
+        let algoRatingSum = 0;
+        let algoRawRatingSum = 0;
+        let algoRatingCount = 0;
+        for (let ratingGroup of algoRatingGroupBy) {
+            if (ratingGroup.algoRating < 0) continue;
+            algoRatingSum += ratingGroup.algoRating * ratingGroup._count;
+            algoRawRatingSum += mapRatingInv(ratingGroup.algoRating) * ratingGroup._count;
+            algoRatingCount += ratingGroup._count;
+        }
+        let algoRatingAvg = algoRatingSum / algoRatingCount;
+        let algoRawRatingAvg = algoRawRatingSum / algoRatingCount;
+        let algoRatingVariance = 0;
+        let algoRawRatingVariance = 0;
+        for (let ratingGroup of algoRatingGroupBy) {
+            if (ratingGroup.algoRating < 0) continue;
+            algoRatingVariance += (ratingGroup.algoRating - algoRatingAvg) ** 2 * ratingGroup._count;
+            algoRawRatingVariance += (mapRatingInv(ratingGroup.algoRating) - algoRawRatingAvg) ** 2 * ratingGroup._count;
+        }
+        algoRatingVariance /= algoRatingCount;
+        algoRawRatingVariance /= algoRatingCount;
+        let algoRatingStdDev = Math.sqrt(algoRatingVariance);
+        let algoRawRatingStdDev = Math.sqrt(algoRawRatingVariance);
+
+        const heuristicRatingGroupBy = await Database.getDatabase().user.groupBy({ where: baseWhere, by: 'heuristicRating', _count: true });
+        let heuristicRatingSum = 0;
+        let heuristicRawRatingSum = 0;
+        let heuristicRatingCount = 0;
+        for (let ratingGroup of heuristicRatingGroupBy) {
+            if (ratingGroup.heuristicRating < 0) continue;
+            heuristicRatingSum += ratingGroup.heuristicRating * ratingGroup._count;
+            heuristicRawRatingSum += mapRatingInv(ratingGroup.heuristicRating) * ratingGroup._count;
+            heuristicRatingCount += ratingGroup._count;
+        }
+        let heuristicRatingAvg = heuristicRatingSum / heuristicRatingCount;
+        let heuristicRawRatingAvg = heuristicRawRatingSum / heuristicRatingCount;
+        let heuristicRatingVariance = 0;
+        let heuristicRawRatingVariance = 0;
+        for (let ratingGroup of heuristicRatingGroupBy) {
+            if (ratingGroup.heuristicRating < 0) continue;
+            heuristicRatingVariance += (ratingGroup.heuristicRating - heuristicRatingAvg) ** 2 * ratingGroup._count;
+            heuristicRawRatingVariance += (mapRatingInv(ratingGroup.heuristicRating) - heuristicRawRatingAvg) ** 2 * ratingGroup._count;
+        }
+        heuristicRatingVariance /= heuristicRatingCount;
+        heuristicRawRatingVariance /= heuristicRatingCount;
+        let heuristicRatingStdDev = Math.sqrt(heuristicRatingVariance);
+        let heuristicRawRatingStdDev = Math.sqrt(heuristicRawRatingVariance);
+        res.json({
+            algoRatingAvg,
+            algoRatingStdDev,
+            algoRawRatingAvg,
+            algoRawRatingStdDev,
+            heuristicRatingAvg,
+            heuristicRatingStdDev,
+            heuristicRawRatingAvg,
+            heuristicRawRatingStdDev,
+        });
         return;
     }
     if (req.path == '/histogram') {
@@ -166,7 +244,7 @@ router.get(['/', '/count', '/histogram'], async (req, res) => {
     }
     res.json({ users, nextCursor });
 });
-router.get('/:name', async (req, res) => {
+router.get('/detail/:name', async (req, res) => {
     const { name } = req.params;
     if (!name) {
         res.status(400).json({ error: 'User name is required' });
@@ -190,7 +268,7 @@ router.get('/:name', async (req, res) => {
     }
     res.json(userData);
 });
-router.get('/:name/stats', async (req, res) => {
+router.get('/detail/:name/stats', async (req, res) => {
     const { name } = req.params;
     if (!name) {
         res.status(400).json({ error: 'User name is required' });
@@ -225,7 +303,7 @@ router.get('/:name/stats', async (req, res) => {
         maxHeuristicRating: maxHeuristicRating ? maxHeuristicRating.newRating : null,
     });
 });
-router.get('/:name/history', async (req, res) => {
+router.get('/detail/:name/history', async (req, res) => {
     const { name } = req.params;
     if (!name) {
         res.status(400).json({ error: 'User name is required' });
@@ -253,7 +331,7 @@ router.get('/:name/history', async (req, res) => {
     res.json(history);
 });
 
-router.get(['/:name/submissions', '/:name/submissions/count'], async (req, res) => {
+router.get(['/detail/:name/submissions', '/detail/:name/submissions/count'], async (req, res) => {
     const { name } = req.params;
     const QuerySchema = z.object({
         contestId: z.string().optional(),
@@ -345,7 +423,7 @@ router.get(['/:name/submissions', '/:name/submissions/count'], async (req, res) 
         nextCursor,
     });
 });
-router.get('/:name/submissions/:submissionId', async (req, res) => {
+router.get('/detail/:name/submissions/:submissionId', async (req, res) => {
     const { name, submissionId } = req.params;
     if (!name || !submissionId) {
         res.status(400).json({ error: 'User name and submission ID are required' });
@@ -378,7 +456,7 @@ router.get('/:name/submissions/:submissionId', async (req, res) => {
     res.json(submission);
 });
 
-router.get(['/:name/rating.svg', '/:name/rating.png'], async (req, res) => {
+router.get(['/detail/:name/rating.svg', '/detail/:name/rating.png'], async (req, res) => {
     const { name } = req.params;
     const { isHeuristic, withPerformance, withSubmissions } = req.query;
     const svg = await getUserRatingImage(name, isHeuristic === 'true', withPerformance === 'true', withSubmissions === 'true');
@@ -391,7 +469,7 @@ router.get(['/:name/rating.svg', '/:name/rating.png'], async (req, res) => {
     res.setHeader('Content-Type', 'image/svg+xml');
     res.send(svg);
 });
-router.get(['/:name/ratingGraph.svg', '/:name/ratingGraph.png'], async (req, res) => {
+router.get(['/detail/:name/ratingGraph.svg', '/detail/:name/ratingGraph.png'], async (req, res) => {
     const { name } = req.params;
     const { isHeuristic, withPerformance, withSubmissions } = req.query;
     const svg = await getHistoryImage(name, isHeuristic === 'true', withPerformance === 'true', withSubmissions === 'true');
