@@ -17,56 +17,16 @@ window.addEventListener('load', () => {
     if (!ctx) {
         return;
     }
-    let numDots = Math.floor((window.innerHeight * window.innerWidth) / 400);
-    console.log(numDots);
-    const dots = Array.from({ length: numDots }, initDot);
+    let scrollY = 0;
+    let scrollNow = 0;
+    window.addEventListener('wheel', (e) => {
+        scrollNow -= e.deltaY / 10;
+    });
     window.addEventListener('resize', () => {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
-        dots.forEach((dot) => {
-            dot.x *= window.innerWidth / beforeWidth;
-            dot.y *= window.innerHeight / beforeHeight;
-        });
         beforeWidth = window.innerWidth;
         beforeHeight = window.innerHeight;
-    });
-
-    function initDot() {
-        const x = Math.random() * window.innerWidth;
-        const y = Math.random() * window.innerHeight;
-        const depth = Math.random() * 100 + 50;
-
-        return {
-            x,
-            y,
-            depth,
-            nowX: x,
-            nowY: y,
-            theta: Math.random() * 360,
-            speed: Math.random() * 0.5 + 0.5,
-            delta: Math.random() * 360,
-            isStatic: false,
-        };
-    }
-
-    window.addEventListener('wheel', (e) => {
-        dots.forEach((dot) => {
-            dot.y -= e.deltaY * 0.1 * (dot.depth / 100);
-
-            if (dot.nowY > window.innerHeight) {
-                const overflow = dot.y - dot.nowY;
-                dot.y = overflow;
-                dot.x = Math.random() * window.innerWidth;
-                dot.nowX = dot.x;
-                dot.nowY = 0;
-            } else if (dot.nowY < 0) {
-                const overflow = dot.y - dot.nowY;
-                dot.y = window.innerHeight + overflow;
-                dot.x = Math.random() * window.innerWidth;
-                dot.nowX = dot.x;
-                dot.nowY = window.innerHeight;
-            }
-        });
     });
 
     function tick() {
@@ -74,51 +34,30 @@ window.addEventListener('load', () => {
         if (!ctx) {
             return;
         }
+        scrollY = (scrollY * 29 + scrollNow) / 30;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        dots.forEach((dot) => {
-            const dx = dot.x - dot.nowX;
-            const dy = dot.y - dot.nowY;
-            dot.nowX += dx * 0.05;
-            dot.nowY += dy * 0.05;
-
-            dot.theta += dot.speed / 60;
-            dot.theta %= 360;
-            if (!dot.isStatic) {
-                dot.x += (Math.cos(((dot.theta + dot.delta) / 180) * Math.PI) * dot.depth) / 900;
-                dot.y += (Math.sin((dot.theta / 180) * Math.PI) * dot.depth) / 600;
-            }
-            ctx.fillStyle = 'rgba(255, 255, 255, ' + dot.depth / 400 + ')';
-            ctx.beginPath();
-            ctx.arc(dot.nowX, dot.nowY, dot.depth / 70, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.closePath();
-        });
-    }
-
-    /**
-     * お蔵入り
-     */
-    function gotoText(text: string, fontSize?: number, point_count?: number) {
-        const point_num = point_count || numDots;
-        if (point_num > numDots) {
-            numDots = point_num;
-            dots.push(...Array.from({ length: numDots - dots.length }, initDot));
-        } else if (point_num < numDots) {
-            dots.splice(numDots, dots.length - numDots);
+        ctx.beginPath();
+        ctx.strokeStyle = 'gray';
+        ctx.lineWidth = 0.2;
+        for (let i = 50; i < canvas.width; i += 50) {
+            ctx.moveTo(i, 0);
+            ctx.lineTo(i, beforeHeight);
         }
-        const points = getFontPoints(text, {
-            maxPoints: numDots,
-            canvasHeight: window.innerHeight,
-            canvasWidth: window.innerWidth,
-            font: (fontSize || 300) + 'px "Playfair Display", serif',
-        });
-        dots.forEach((dot, i) => {
-            dot.x = points[i].x;
-            dot.y = points[i].y;
-            dot.isStatic = true;
-        });
+        for (let i = scrollY % 50; i < canvas.height; i += 50) {
+            ctx.moveTo(0, i);
+            ctx.lineTo(beforeWidth, i);
+        }
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.fillStyle = 'rgb(55,55,55)';
+        for (let x = 50; x < canvas.width; x += 50) {
+            for (let y = scrollY % 50; y < canvas.height; y += 50) {
+                ctx.moveTo(x, y - 2);
+                ctx.arc(x, y, 2, 0, 2 * Math.PI);
+            }
+        }
+        ctx.fill();
     }
-    window.gotoText = gotoText;
 
     tick();
 

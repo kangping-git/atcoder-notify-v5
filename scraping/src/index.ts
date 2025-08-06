@@ -9,8 +9,6 @@ import http from 'http';
 import { addSubmissionListener } from './scraper/submissions/getSubmissions';
 import { config } from 'dotenv';
 import path from 'path';
-import { ScraperContestResult } from './scraper/contests/crawlContestResult';
-import { rebuildUsersTable } from './build_db/users';
 config({ path: path.join(__dirname, '../../.env') });
 
 export namespace Main {
@@ -44,7 +42,7 @@ export namespace Main {
                 );
             });
         });
-        // createProxyServer();
+        createProxyServer();
         logger.info('Background tasks started.');
     }
     export function sendEvent(event: string, data: any) {

@@ -111,6 +111,8 @@ model User {
   submissions submissions[]
   contests    Contest[]
   ratings    userRatingChangeEvent[]
+
+  linked     KickyUser[]
 }
 model userRatingChangeEvent {
   id        Int      @id @default(autoincrement())
@@ -141,6 +143,14 @@ model KickyUser {
   password  String
   salt      String
   email     String
+
+  twitterOAuthTokenSecret  String?
+  twitterOAuthAccessToken  String?
+  twitterOAuthAccessSecret String?
+  twitterOAuthUsername     String?
+
+  linkedAtCoderUserId  Int?
+  linkedAtCoderUser    User? @relation(fields: [linkedAtCoderUserId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt @default(now())

@@ -67,9 +67,7 @@ app.use((req, res, next) => {
 import mainRouter from './routers/main';
 app.use('/', mainRouter);
 import accountsRouter from './routers/accounts';
-if (!process.env.PRODUCTION) {
-    app.use('/accounts', accountsRouter);
-}
+app.use('/accounts', accountsRouter);
 import appsRouter from './routers/apps';
 app.use('/apps', appsRouter);
 import apiRouter from './routers/api';

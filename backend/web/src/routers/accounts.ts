@@ -1,14 +1,9 @@
 import { z } from 'zod';
 import { Router } from 'express';
-import {
-    isValidPassword,
-    isValidTurnstileResponse,
-    isValidUsername,
-    PasswordValidation,
-    UsernameValidation,
-} from '../utils';
+import { isValidPassword, isValidTurnstileResponse, isValidUsername, PasswordValidation, UsernameValidation } from '../utils';
 import crypto from 'crypto';
 import { Database } from '../database';
+import { responseError } from '../error';
 
 const router = Router();
 
@@ -22,6 +17,63 @@ router.get('/register', (req, res) => {
     res.render('accounts/register', {
         error: '',
         turnstile_sitekey: process.env.TURNSTILE_SITEKEY,
+    });
+});
+
+router.get('/dashboard', async (req, res) => {
+    if (!req.session.userId) {
+        res.redirect('accounts/login');
+        return;
+    }
+    let atcoder = null;
+    if (req.session.user && req.session.user.linkedAtCoderUserId) {
+        atcoder = await Database.getDatabase().user.findFirst({
+            where: {
+                id: req.session.user?.linkedAtCoderUserId,
+            },
+        });
+    }
+    res.render('accounts/dashboard', {
+        user: req.session.user,
+        atcoder,
+    });
+});
+router.get('/link/atcoder', async (req, res) => {
+    if (!req.session.userId) {
+        res.redirect('accounts/login');
+        return;
+    }
+    const atcoder_account = req.query.username;
+    if (!atcoder_account || typeof atcoder_account != 'string') {
+        res.json({
+            success: true,
+            reason: 'query type is not valid',
+        });
+        return;
+    }
+    const get = await Database.getDatabase().user.findFirst({
+        where: {
+            name: atcoder_account,
+        },
+    });
+    if (!get) {
+        res.json({
+            success: false,
+            reason: "can't find atcoder account",
+        });
+        return;
+    }
+    await Database.getDatabase().kickyUser.update({
+        where: {
+            id: req.session.userId!,
+        },
+        data: {
+            linkedAtCoderUserId: get.id,
+        },
+    });
+    res.json({
+        success: true,
+        reason: '',
     });
 });
 
@@ -42,14 +94,7 @@ router.post('/register', async (req, res) => {
         });
         return;
     }
-    const {
-        username,
-        password,
-        confirm_password,
-        email,
-        'cf-turnstile-response': turnstileResponse,
-        invite_code,
-    } = result.data;
+    const { username, password, confirm_password, email, 'cf-turnstile-response': turnstileResponse, invite_code } = result.data;
 
     if (password !== confirm_password) {
         res.render('accounts/register', {
@@ -115,9 +160,7 @@ router.post('/register', async (req, res) => {
         return;
     }
     const passwordSalt = crypto.randomBytes(16).toString('hex');
-    const passwordHash = crypto
-        .pbkdf2Sync(password, passwordSalt, 100000, 64, 'sha512')
-        .toString('hex');
+    const passwordHash = crypto.pbkdf2Sync(password, passwordSalt, 100000, 64, 'sha512').toString('hex');
 
     const user = await Database.getDatabase().kickyUser.create({
         data: {
@@ -137,7 +180,7 @@ router.get('/logout', (req, res) => {
 const loginValidator = z.object({
     username: z.string().min(3).max(20),
     password: z.string().min(8).max(100),
-    'cf-turnstile-response': z.string().min(1),
+    'cf-turnstile-response': z.string(),
 });
 router.post('/login', async (req, res) => {
     const result = loginValidator.safeParse(req.body);
@@ -169,14 +212,13 @@ router.post('/login', async (req, res) => {
         });
         return;
     }
-    const passwordHash = crypto
-        .pbkdf2Sync(password, user.salt, 100000, 64, 'sha512')
-        .toString('hex');
+    const passwordHash = crypto.pbkdf2Sync(password, user.salt, 100000, 64, 'sha512').toString('hex');
     if (passwordHash !== user.password) {
         res.render('accounts/login', {
             error: 'Invalid username or password.',
             turnstile_sitekey: process.env.TURNSTILE_SITEKEY,
         });
+        return;
     }
     req.session.userId = user.id;
     res.redirect('/');
