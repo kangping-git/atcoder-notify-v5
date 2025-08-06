@@ -22,7 +22,7 @@ router.get('/twitter/', async (req, res) => {
         res.redirect('/accounts/login');
         return;
     }
-    const { url, oauth_token, oauth_token_secret } = await twitterAPI.generateAuthLink('http://localhost:3080/twitter/callback');
+    const { url, oauth_token, oauth_token_secret } = await twitterAPI.generateAuthLink('https://beta.kyo-pro.club/twitter/callback');
     await Database.getDatabase().kickyUser.update({
         where: {
             id: req.session.userId!,
