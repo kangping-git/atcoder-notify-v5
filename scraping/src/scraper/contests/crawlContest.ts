@@ -5,6 +5,9 @@ import { AtCoderScraper } from '../atcoderScraper';
 import { contestType } from '@prisma/client';
 import { Config } from '../../config/config';
 import { Database } from '../../database';
+import puppeteer from 'puppeteer';
+import path from 'path';
+import { existsSync } from 'fs';
 
 export namespace ScraperContest {
     export async function CrawlAllContest() {
@@ -112,6 +115,31 @@ export namespace ScraperContest {
                 ratingRangeEnd: ratingRangeObj.end,
                 contestType: ContestType,
                 isHeuristic: isHeuristic,
+            },
+        });
+    }
+    export async function getProblemPDF(contestId: string) {
+        if (!existsSync(path.join(__dirname, '../../../../data/pdf', contestId + '.pdf'))) {
+            const pageURL = `https://atcoder.jp/contests/${contestId}/tasks_print`;
+            const browser = await puppeteer.launch();
+            const page = await browser.newPage();
+            await page.goto(pageURL, { waitUntil: 'networkidle0' });
+            console.log('Crawling PDF:' + contestId);
+            await page.pdf({
+                path: path.join(__dirname, '../../../../data/pdf', contestId + '.pdf'),
+                format: 'A4',
+                printBackground: true,
+                margin: { top: '20mm', bottom: '20mm', left: '10mm', right: '10mm' },
+                timeout: 2 ** 31 - 1,
+            });
+            await browser.close();
+        }
+        await Database.getDatabase().contest.update({
+            where: {
+                id: contestId,
+            },
+            data: {
+                crawledPDF: true,
             },
         });
     }

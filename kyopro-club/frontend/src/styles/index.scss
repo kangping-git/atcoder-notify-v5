@@ -1,0 +1,154 @@
+@use 'sass:color';
+@use './lato.scss';
+
+$color-bg: oklch(0.16 0.05 270);
+$color-surface: oklch(0.2 0.05 270);
+$color-divider: oklch(0.25 0.05 270);
+$color-text: oklch(0.95 0.05 270);
+
+$anime-cubic: cubic-bezier(0.4, 0.2, 0.2, 1);
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    background-color: color.adjust($color-bg, $lightness: -5%);
+    color: $color-text;
+    font-family: 'Lato', sans-serif;
+    z-index: -10000;
+}
+
+.card {
+    display: inline-block;
+    transition: all 0.18s $anime-cubic;
+    transform: translateY(0px) scale(1);
+    background: linear-gradient(45deg, $color-surface, color.adjust($color-surface, $lightness: 10%));
+    width: 200px;
+    height: 300px;
+    padding: 5px;
+    border-radius: 10px;
+    box-shadow: 2px 5px 2px color.adjust($color-bg, $lightness: 10%);
+    margin: 10px;
+}
+.card:hover {
+    transform: translateY(-5px) scale(1.03);
+    box-shadow: 2px 5px 5px color.adjust($color-bg, $lightness: 20%);
+}
+
+a {
+    display: inline-block;
+    transition: all 0.18s $anime-cubic;
+    transform: translateY(0px) scale(1);
+    color: $color-text;
+}
+a:hover {
+    transform: translateY(-1px) scale(1.03);
+    text-shadow: 0 1px 4px color.adjust($color-text, $lightness: -50%);
+}
+canvas#background {
+    position: fixed;
+    top: 0px;
+    left: 0px;
+    height: 100vh;
+    width: 100vw;
+    z-index: -9999;
+}
+main {
+    min-height: calc(100vh - 100px);
+    box-sizing: border-box;
+    padding: 40px 80px;
+    max-width: 1000px;
+    margin-left: auto;
+    margin-right: auto;
+    background-color: $color-bg;
+    z-index: 0;
+}
+
+header {
+    box-sizing: border-box;
+    height: 40px;
+    background-color: $color-surface;
+    padding-left: 20px;
+    padding-right: 20px;
+    position: fixed;
+    width: 100%;
+    top: 0px;
+    z-index: 1000;
+    ul {
+        position: fixed;
+        display: flex;
+        align-items: center;
+        padding: 0;
+        margin: 0;
+        &.left-header {
+            left: 0px;
+        }
+        &.right-header {
+            right: 0px;
+        }
+    }
+    li {
+        height: 40px;
+        img {
+            height: 30px;
+            margin-top: 5px;
+        }
+        a {
+            line-height: 40px;
+            font-size: 14pt;
+        }
+        display: inline-block;
+        list-style: none;
+        padding: 0px 20px;
+    }
+}
+
+footer {
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+    bottom: 0px;
+
+    box-sizing: border-box;
+    padding: 50px;
+    width: 100%;
+    background: linear-gradient(to top, $color-surface, color.adjust($color-surface, $lightness: 3%));
+    border-top: solid 1px $color-divider;
+    .footer-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr 1fr;
+        @media screen and (width <= 600px) {
+            grid-template-columns: 1fr;
+        }
+        .footer-title {
+            padding-bottom: 50px;
+            text-align: center;
+            font-size: 24pt;
+            font-weight: 700;
+        }
+        .footer-column {
+            min-height: 100px;
+            padding-bottom: 50px;
+            @media screen and (width > 600px) {
+                border-left: 1px solid $color-text;
+                padding-left: 30px;
+            }
+            h2 {
+                font-size: 16pt;
+                font-weight: 600;
+                margin: 0;
+                margin-bottom: 10px;
+                letter-spacing: 1px;
+            }
+            a {
+                line-height: 24px;
+            }
+        }
+    }
+    .footer-copyright {
+        margin-top: 30px;
+        text-align: center;
+        color: color.adjust($color-surface, $lightness: 50%);
+        font-size: 10pt;
+        letter-spacing: 0.05em;
+    }
+}

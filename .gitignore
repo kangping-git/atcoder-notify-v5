@@ -7,3 +7,4 @@ dist
 *.log
 prisma/migrations/
 judgement/submissions/
+*.pdf

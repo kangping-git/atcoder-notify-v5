@@ -1,0 +1,18 @@
+@use 'sass:color';
+@use './index.scss' as *;
+
+.subtitle {
+    font-size: 20pt;
+    .text-gradient {
+        transition: all 0.18s $anime-cubic;
+        display: inline-block;
+        background: linear-gradient(color.adjust($color-text, $lightness: -30%), $color-text);
+        background-clip: text;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-size: 24pt;
+    }
+    .text-gradient:hover {
+        transform: translateY(-5px) scale(1.03);
+    }
+}

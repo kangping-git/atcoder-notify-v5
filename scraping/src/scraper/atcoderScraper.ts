@@ -35,7 +35,7 @@ export namespace AtCoderScraper {
         cron.schedule('*/1 * * * *', runEveryMinute, { timezone: 'Asia/Tokyo' });
         cron.schedule('0 7 * * *', runDaily, { timezone: 'Asia/Tokyo' });
         logger.info('AtCoder scraper cron jobs started successfully');
-        CrawlAllSubmissionsEvent();
+        // CrawlAllSubmissionsEvent();
         CrawlContestResults();
     }
 
@@ -51,9 +51,21 @@ export namespace AtCoderScraper {
             },
             orderBy: { endTime: 'asc' },
         });
+        const contestsUnCrawledPDF = await Database.getDatabase().contest.findMany({
+            where: {
+                endTime: {
+                    lte: new Date(),
+                },
+                crawledPDF: false,
+            },
+            orderBy: { endTime: 'asc' },
+        });
         crawlingContestResults = true;
         for (const contest of contests) {
             await ScraperContestResult.crawlContestResult(contest.id);
+        }
+        for (const contest of contestsUnCrawledPDF) {
+            await ScraperContest.getProblemPDF(contest.id);
         }
 
         crawlingContestResults = false;

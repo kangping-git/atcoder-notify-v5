@@ -3,7 +3,16 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>error</title>
+        <title><%= statusCode %> <%= message %></title>
+        <script src="/static/error.js"></script>
+        <link rel="stylesheet" href="/static/error.css" />
+        <%- include("./components/links.ejs") %>
     </head>
-    <body></body>
+    <body>
+        <%- include("./components/header.ejs") %>
+        <main>
+            <h1><%= statusCode %> <%= message %></h1>
+        </main>
+        <%- include("./components/footer.ejs") %>
+    </body>
 </html>

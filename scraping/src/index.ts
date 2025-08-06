@@ -24,7 +24,6 @@ export namespace Main {
 
         // Start Background tasks
         logger.info('Starting background tasks...');
-        // console.log(process.env.SOCK5_PROXY);
         Proxy.initProxy(process.env.SOCK5_PROXY!);
         await Database.initDatabase();
         // rebuildUsersTable();
@@ -45,7 +44,7 @@ export namespace Main {
                 );
             });
         });
-        createProxyServer();
+        // createProxyServer();
         logger.info('Background tasks started.');
     }
     export function sendEvent(event: string, data: any) {

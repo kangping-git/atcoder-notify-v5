@@ -1,7 +1,9 @@
 {
     "scripts": {
-        "build": "webpack",
-        "build:release": "webpack --mode production",
-        "build:watch": "webpack --watch"
+        "dev": "vite",
+        "build": "vite build",
+        "build:release": "vite build --mode production",
+        "build:watch": "vite build --watch",
+        "preview": "vite preview"
     }
 }

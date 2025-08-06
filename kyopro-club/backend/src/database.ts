@@ -7,7 +7,6 @@ export namespace Database {
         if (!database) {
             database = new PrismaClient({});
         }
-        database.$connect();
     }
     export function getDatabase(): PrismaClient {
         if (!database) {

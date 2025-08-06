@@ -10,12 +10,22 @@ config({ path: path.join(__dirname, '../../../../.env') });
 const app = express();
 app.use(logger('dev'));
 const PORT = process.env.KYOPRO_CLUB_PORT || 3000;
+
+// 開発環境設定
+if (process.env.NODE_ENV === 'development') {
+    app.locals.isDevelopment = true;
+} else {
+    app.locals.isDevelopment = false;
+}
+
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, '../../frontend/views'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 const prisma = new PrismaClient();
 app.use('/static', express.static(path.join(__dirname, '../../frontend/dist')));
+app.use('/public', express.static(path.join(__dirname, '../../frontend/public')));
+app.use('/', express.static(path.join(__dirname, '../../frontend/favicon')));
 
 app.use(
     expressSession({
@@ -62,6 +72,8 @@ app.use((req, res, next) => {
 
 import homeRouter from './router/home';
 app.use('/', homeRouter);
+import accountsRouter from './router/accounts';
+app.use('/accounts/', accountsRouter);
 
 import { responseError } from './error';
 import { Database } from './database';

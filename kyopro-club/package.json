@@ -6,6 +6,9 @@
         "build:frontend:watch": "cd frontend & npm run build:watch",
         "build": "concurrently \"npm run build:backend\"  \"npm run build:frontend\"",
         "build:watch": "concurrently \"npm run build:backend:watch\" \"npm run build:frontend:watch\"",
+        "dev:frontend": "cd frontend & npm run dev",
+        "dev:backend": "cd backend & npm run dev",
+        "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
         "start": "node ./backend/dist/index.js"
     }
 }
