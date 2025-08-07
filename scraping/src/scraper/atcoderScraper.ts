@@ -38,7 +38,7 @@ export namespace AtCoderScraper {
         cron.schedule('*/1 * * * *', runEveryMinute, { timezone: 'Asia/Tokyo' });
         cron.schedule('0 7 * * *', runDaily, { timezone: 'Asia/Tokyo' });
         logger.info('AtCoder scraper cron jobs started successfully');
-        // CrawlAllSubmissionsEvent();
+        CrawlAllSubmissionsEvent();
         CrawlContestResults();
     }
 
@@ -255,7 +255,8 @@ export namespace AtCoderScraper {
                 });
                 images.push(mediaId2);
             }
-            twitterClient.v2.tweet(`あんた(${atcoderUsername?.name})の今日の提出は${submissionCount}件。${message}`, {
+            const kyoproClubURL = `https://beta.kyo-pro.club`;
+            await twitterClient.v2.tweet(`あんた(${atcoderUsername?.name})の昨日の提出は${submissionCount}件。${message}\n${kyoproClubURL}`, {
                 media: { media_ids: images as [string, string] },
             });
         }
