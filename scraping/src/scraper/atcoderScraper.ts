@@ -143,12 +143,16 @@ export namespace AtCoderScraper {
                 },
             },
         });
+        // JSTで昨日の開始・終了時刻を取得
         const startOfYesterday = new Date();
         startOfYesterday.setHours(0, 0, 0, 0);
         startOfYesterday.setDate(startOfYesterday.getDate() - 1);
+        startOfYesterday.setHours(startOfYesterday.getHours() - startOfYesterday.getTimezoneOffset() / 60 + 9);
+
         const endOfYesterday = new Date();
         endOfYesterday.setHours(23, 59, 59, 999);
         endOfYesterday.setDate(endOfYesterday.getDate() - 1);
+        endOfYesterday.setHours(endOfYesterday.getHours() - endOfYesterday.getTimezoneOffset() / 60 + 9);
         let difficulties = await (await fetch('https://kenkoooo.com/atcoder/resources/problem-models.json')).json();
         for (let user of linkedUsers) {
             const submissionCount = await Database.getDatabase().submissions.count({
