@@ -119,7 +119,7 @@ export namespace ScraperContest {
         });
     }
     export async function getProblemPDF(contestId: string) {
-        if (!existsSync(path.join(__dirname, '../../../../data/pdf', contestId + '.pdf'))) {
+        if (!existsSync(path.join(__dirname, '../../../../data/pdf', contestId + '.pdf')) && process.env.PRODUCTION != 'true') {
             const pageURL = `https://atcoder.jp/contests/${contestId}/tasks_print`;
             const browser = await puppeteer.launch();
             const page = await browser.newPage();

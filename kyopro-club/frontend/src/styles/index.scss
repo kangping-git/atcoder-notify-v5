@@ -23,9 +23,9 @@ body {
     transition: all 0.18s $anime-cubic;
     transform: translateY(0px) scale(1);
     background: linear-gradient(45deg, $color-surface, color.adjust($color-surface, $lightness: 10%));
-    width: 200px;
+    width: 160px;
     height: 300px;
-    padding: 5px;
+    padding: 20px;
     border-radius: 10px;
     box-shadow: 2px 5px 2px color.adjust($color-bg, $lightness: 10%);
     margin: 10px;

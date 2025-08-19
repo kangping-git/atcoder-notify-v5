@@ -42,6 +42,43 @@ export async function CrawlAllSubmissions(contest: string): Promise<void> {
             const isFinishedFromWorker = await CrawlSubmissionWorker(contest, page, waitingJudges);
             if (isFinishedFromWorker && !isFinished) {
                 isFinished = true;
+                for (let submissionId of waitingJudges) {
+                    const submissionData = await getSubmission(contest, submissionId.toString());
+                    if (!submissionData) {
+                        AtCoderScraper.logger.warn(`Submission ${submissionId} not found during final upsert`);
+                        await Database.getDatabase().submissions.delete({
+                            where: {
+                                submissionId: submissionId,
+                            },
+                        });
+                        continue;
+                    }
+                    try {
+                        await Database.getDatabase().user.upsert({
+                            where: { name: submissionData.userId },
+                            create: { name: submissionData.userId },
+                            update: {},
+                        });
+
+                        const prismaSubmission = convertScraperSubmissionToPrismaSubmission(submissionData);
+
+                        const beforeSubmission = await Database.getDatabase().submissions.findFirst({
+                            where: { submissionId: prismaSubmission.submissionId },
+                        });
+
+                        await Database.getDatabase().submissions.upsert({
+                            where: { submissionId: prismaSubmission.submissionId },
+                            create: prismaSubmission,
+                            update: prismaSubmission,
+                        });
+
+                        if (!beforeSubmission || beforeSubmission.status !== submissionData.status) {
+                            submissionListeners.forEach((listener) => listener(submissionData));
+                        }
+                    } catch (e) {
+                        AtCoderScraper.logger.error(`Failed to upsert submission ${submissionId} during finalization`, { error: e });
+                    }
+                }
                 resolve();
             }
             if (!isFinished) {
@@ -111,10 +148,13 @@ async function CrawlSubmissionWorker(contest: string, page: number, waitingJudge
         }
         waitingJudges.delete(submission.submissionId);
     }
-    if (waitingJudges.size > 0 || unknownSubmissions.length > 0) {
+    if (unknownSubmissions.length == 0) {
+        return true;
+    }
+    if (waitingJudges.size > 0) {
         return false;
     }
-    return true;
+    return false;
 }
 
 export enum SubmissionStatus {
@@ -285,7 +325,7 @@ export function analyzeSubmission(row: Element): Submission {
     }
 }
 export async function getSubmission(contestId: string, submissionId: string) {
-    const url = `https://atcoder.jp/contests/${contestId}/submissions/${submissionId}`;
+    const url = `https://atcoder.jp/contests/${contestId}/submissions/${submissionId}?lang=en`;
     const response = await Proxy.get(url, AtCoderScraper.getCookie());
     if (response.status !== 200) {
         AtCoderScraper.logger.error(`Failed to fetch submission ${submissionId}`, {
@@ -301,13 +341,13 @@ export async function getSubmission(contestId: string, submissionId: string) {
         const header = $(row).find('th').first().text().trim();
         const cell = $(row).find('td').first();
         switch (header) {
-            case '提出日時': {
+            case 'Submission Time': {
                 // The time text is inside a <time> element.
                 const timeText = cell.find('time').text().trim();
                 info.datetime = new Date(timeText);
                 break;
             }
-            case '問題': {
+            case 'Task': {
                 // Example href: "/contests/dp/tasks/dp_i"
                 const href = cell.find('a').attr('href') || '';
                 const parts = href.split('/');
@@ -315,26 +355,25 @@ export async function getSubmission(contestId: string, submissionId: string) {
                 info.problemId = parts[4] || '';
                 break;
             }
-            case 'ユーザ': {
+            case 'User': {
                 const href = cell.find('a').attr('href') || '';
                 info.userId = href.split('/')[2] || cell.text().trim();
                 break;
             }
-            case '言語': {
+            case 'Language': {
                 info.language = cell.text().trim();
                 break;
             }
-            case '得点': {
+            case 'Score': {
                 info.score = Number(cell.text().trim());
                 break;
             }
-            case 'コード長': {
-                // "553 Byte" -> 553
+            case 'Code Size': {
                 const parts = cell.text().trim().split(' ');
                 info.codeLength = parseInt(parts[0], 10);
                 break;
             }
-            case '結果': {
+            case 'Status': {
                 const statusText = cell.find('span').text().trim();
                 info.status = parseSubmissionStatus(statusText);
                 if (

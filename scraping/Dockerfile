@@ -13,6 +13,15 @@ COPY scraping ./scraping
 COPY prisma ./prisma
 COPY production.env .env
 
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+      wget \
+      unzip \
+      fontconfig \
+      fonts-lato \
+      fonts-noto-cjk && \
+    rm -rf /var/lib/apt/lists/*
+
 RUN npx prisma generate
 # Build scraping project
 RUN npm run build:scraping
