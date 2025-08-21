@@ -129,8 +129,8 @@ export namespace AtCoderScraper {
             setWindow(1);
             setTimeoutValue(1000);
         } else {
-            setWindow(3);
-            setTimeoutValue(600);
+            setWindow(1);
+            setTimeoutValue(300);
         }
 
         const linkedUsers = await Database.getDatabase().kickyUser.findMany({
