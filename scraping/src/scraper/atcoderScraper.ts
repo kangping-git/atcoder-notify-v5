@@ -9,6 +9,7 @@ import { nextTick } from 'process';
 import { TwitterApi } from 'twitter-api-v2';
 import { createCircleGraph } from '../utils/createCircleGraph';
 import sharp from 'sharp';
+import { rebuildUsersTable } from '../build_db/users';
 
 export namespace AtCoderScraper {
     let sessionId: string | null = null;
@@ -32,7 +33,6 @@ export namespace AtCoderScraper {
         }
 
         logger.info('AtCoder scraper initialized successfully');
-
         logger.info('Starting AtCoder scraper cron jobs...');
         cron.schedule('*/30 * * * * *', runEvery30Seconds, { timezone: 'Asia/Tokyo' });
         cron.schedule('*/1 * * * *', runEveryMinute, { timezone: 'Asia/Tokyo' });

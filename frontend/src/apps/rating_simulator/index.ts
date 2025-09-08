@@ -55,17 +55,6 @@ window.addEventListener('load', () => {
             times = value;
         }
     });
-    let inputted: string[] = [];
-    window.addEventListener('keydown', async (e) => {
-        inputted.push(e.code);
-        const kakushi = 'b59362197e2978d92e95e70c8cdc5e14a8943dfcb61546d5d80db20fa2c4c319';
-        if (inputted.length >= 10) {
-            inputted = inputted.slice(inputted.length - 10);
-            if ((await sha256(JSON.stringify(inputted))) == kakushi) {
-                document.getElementById('estimator')!.style.display = 'block';
-            }
-        }
-    });
     let usernameInput = document.getElementById('username') as HTMLInputElement;
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
     usernameInput.addEventListener('input', (e) => {

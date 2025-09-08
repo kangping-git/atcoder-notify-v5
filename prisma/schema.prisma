@@ -126,6 +126,7 @@ model userRatingChangeEvent {
   contestId String
   contest   Contest @relation(fields: [contestId], references: [id])
   place Int @default(0)
+  isRated  Boolean @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt @default(now())
 }

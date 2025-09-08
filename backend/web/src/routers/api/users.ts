@@ -247,7 +247,7 @@ router.get(['/', '/count', '/histogram', '/deviation'], async (req, res) => {
 router.get('/detail/:name', async (req, res) => {
     const { name } = req.params;
     if (!name) {
-        res.status(400).json({ error: 'User name is required' });
+        res.status(400).json({ error: 'Username is required' });
         return;
     }
     const userData = await Database.getDatabase().user.findUnique({
@@ -259,7 +259,7 @@ router.get('/detail/:name', async (req, res) => {
             heuristicRating: true,
             algoAPerf: true,
             heuristicAPerf: true,
-            lastContestTime: true,
+            lastContestTime: true,            
         },
     });
     if (!userData) {
@@ -326,6 +326,7 @@ router.get('/detail/:name/history', async (req, res) => {
             performance: true,
             InnerPerformance: true,
             place: true,
+            isRated: true
         },
     });
     res.json(history);

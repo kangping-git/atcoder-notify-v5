@@ -24,6 +24,7 @@ interface RatingData {
     performance: number;
     InnerPerformance: number;
     place: number;
+    isRated: boolean
 }
 
 export interface RatingColor {
@@ -98,6 +99,7 @@ export async function draw(
         }
         cache[username] = data;
     }
+    data = data.filter(v => v.isRated)
 
     ctx.clearRect(0, 0, canvasData.width, canvasData.height);
     ctx.strokeStyle = '#aaa';

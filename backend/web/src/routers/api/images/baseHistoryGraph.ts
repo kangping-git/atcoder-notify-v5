@@ -129,7 +129,7 @@ export class BaseHistoryGraph {
         if (this.ratingHistory.length) return;
 
         this.ratingHistory = await Database.getDatabase().userRatingChangeEvent.findMany({
-            where: { user: { name: this.userName }, isHeuristic: this.isHeuristic },
+            where: { user: { name: this.userName }, isHeuristic: this.isHeuristic, isRated: true },
             select: { contest: true, newRating: true, performance: true },
             orderBy: { contest: { endTime: 'asc' } },
         });
@@ -346,7 +346,7 @@ export class BaseHistoryGraph {
     /** ヘッダー部 (最新コンテストの rating / diff / 順位) */
     private async drawRatingHeader(): Promise<string> {
         const [latest] = await Database.getDatabase().userRatingChangeEvent.findMany({
-            where: { user: { name: this.userName }, isHeuristic: this.isHeuristic },
+            where: { user: { name: this.userName }, isHeuristic: this.isHeuristic , isRated:true},
             select: { contest: true, newRating: true, oldRating: true, place: true },
             orderBy: { contest: { endTime: 'desc' } },
             take: 1,

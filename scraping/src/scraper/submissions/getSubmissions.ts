@@ -6,7 +6,7 @@ import { convertScraperSubmissionToPrismaSubmission } from './typeConverter';
 import { Database } from '../../database';
 import { AxiosError } from 'axios';
 
-let window = 3;
+let window = 1;
 let timeout = 1000;
 const submissionListeners = new Set<(sub: Submission) => void>();
 export function addSubmissionListener(listener: (sub: Submission) => void) {
@@ -326,13 +326,25 @@ export function analyzeSubmission(row: Element): Submission {
 }
 export async function getSubmission(contestId: string, submissionId: string) {
     const url = `https://atcoder.jp/contests/${contestId}/submissions/${submissionId}?lang=en`;
-    const response = await Proxy.get(url, AtCoderScraper.getCookie());
-    if (response.status !== 200) {
+
+    let response;
+    try {
+        response = await Proxy.get(url, AtCoderScraper.getCookie());
+    } catch (e) {
+        AtCoderScraper.logger.error(`Network error while fetching submission ${submissionId}`, { error: e });
+        if (e instanceof AxiosError && e.response?.status === 404) {
+            return null;
+        }
+        return null;
+    }
+
+    if (!response || response.status !== 200) {
         AtCoderScraper.logger.error(`Failed to fetch submission ${submissionId}`, {
-            status: response.status,
+            status: response ? response.status : 'undefined',
         });
         return null;
     }
+
     const $ = cheerio.load(response.data);
 
     // Parse the submission info panel.
@@ -344,7 +356,14 @@ export async function getSubmission(contestId: string, submissionId: string) {
             case 'Submission Time': {
                 // The time text is inside a <time> element.
                 const timeText = cell.find('time').text().trim();
-                info.datetime = new Date(timeText);
+                if (timeText) {
+                    const parsed = new Date(timeText);
+                    if (!Number.isNaN(parsed.getTime())) {
+                        info.datetime = parsed;
+                    } else {
+                        AtCoderScraper.logger.warn(`Unable to parse submission time for ${submissionId}`, { timeText });
+                    }
+                }
                 break;
             }
             case 'Task': {
@@ -365,12 +384,14 @@ export async function getSubmission(contestId: string, submissionId: string) {
                 break;
             }
             case 'Score': {
-                info.score = Number(cell.text().trim());
+                const n = Number(cell.text().trim());
+                info.score = Number.isNaN(n) ? 0 : n;
                 break;
             }
             case 'Code Size': {
                 const parts = cell.text().trim().split(' ');
-                info.codeLength = parseInt(parts[0], 10);
+                const n = parseInt(parts[0], 10);
+                info.codeLength = Number.isNaN(n) ? 0 : n;
                 break;
             }
             case 'Status': {
@@ -384,16 +405,42 @@ export async function getSubmission(contestId: string, submissionId: string) {
                         info.status === SubmissionStatus.IE
                     )
                 ) {
-                    // For successful/failed submissions, parse additional fields.
-                    const timeText = cell.next().find('td').text().replace('ms', '').trim();
-                    info.time = parseInt(timeText, 10);
-                    const memoryText = cell.next().next().find('td').text().replace('KB', '').trim();
-                    info.memory = parseInt(memoryText, 10);
+                    // For successful/failed submissions, try to parse additional fields defensively.
+                    try {
+                        const timeText = cell.next().find('td').text().replace('ms', '').trim();
+                        const timeParsed = parseInt(timeText, 10);
+                        info.time = Number.isNaN(timeParsed) ? 0 : timeParsed;
+                    } catch (err) {
+                        AtCoderScraper.logger.warn(`Unable to parse time for submission ${submissionId}`, { error: err });
+                        info.time = 0;
+                    }
+                    try {
+                        const memoryText = cell.next().next().find('td').text().replace('KB', '').trim();
+                        const memParsed = parseInt(memoryText, 10);
+                        info.memory = Number.isNaN(memParsed) ? 0 : memParsed;
+                    } catch (err) {
+                        AtCoderScraper.logger.warn(`Unable to parse memory for submission ${submissionId}`, { error: err });
+                        info.memory = 0;
+                    }
                 }
                 break;
             }
         }
     });
+
+    // Ensure we have a valid status; default to WJ if missing.
+    if (!info.status) {
+        info.status = SubmissionStatus.WJ;
+    }
+
+    // Safely convert submissionId to BigInt
+    let submissionIdBigInt: bigint;
+    try {
+        submissionIdBigInt = BigInt(submissionId);
+    } catch (e) {
+        AtCoderScraper.logger.error(`Invalid submissionId ${submissionId}`, { error: e });
+        return null;
+    }
 
     if (
         info.status === SubmissionStatus.CE ||
@@ -403,12 +450,12 @@ export async function getSubmission(contestId: string, submissionId: string) {
     ) {
         return {
             ...info,
-            submissionId: BigInt(submissionId),
+            submissionId: submissionIdBigInt,
         } as SubmissionWithoutTimeAndMemory;
     } else {
         return {
             ...info,
-            submissionId: BigInt(submissionId),
+            submissionId: submissionIdBigInt,
         } as SubmissionWithTimeAndMemory;
     }
 }
