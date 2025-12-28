@@ -20,6 +20,12 @@ function mapRatingInv(rating: number) {
     }
     return rating;
 }
+function mapRating(rating: number) {
+    if (rating < 400){
+        return 400 / Math.exp((400-rating)/400);
+    }
+    return rating;
+}
 COLORS.reverse();
 export function getColorByRating(rating: number): string {
     const color = COLORS.find((c) => rating >= c.rating);
@@ -209,19 +215,23 @@ filterWindow.innerHTML = `
                 country: <input type="text" id="countryFilter" /> <br />
                 algoRating: <input type="number" id="algoMinFilter" />~<input type="number" id="algoMaxFilter" /> <br />
                 heuristicRating: <input type="number" id="heuristicMinFilter" /> ~ <input type="number" id="heuristicMaxFilter" /> <br />
+                algoInnerRating: <input type="number" id="algoInnerMinFilter" />~<input type="number" id="algoInnerMaxFilter" /> <br />
+                heuristicInnerRating: <input type="number" id="heuristicInnerMinFilter" /> ~ <input type="number" id="heuristicInnerMaxFilter" /> <br />
                 limit: <input type="number" id="limitFilter" /><br />
                 sortBy:
                 <select id="sortBy">
                     <option value="name">Name</option>
                     <option value="algoRating" selected>Algo Rating</option>
                     <option value="heuristicRating">Heuristic Rating</option>
+                    <option value="algoInnerRating">Algo Inner Rating</option>
+                    <option value="heuristicInnerRating">Heuristic Inner Rating</option>
                 </select>
                 <br />
                 isActive: <input type="checkbox" id="isActive" /><br />
                 reverse: <input type="checkbox" id="reverse" /><br />
                 <button id="applyFilters">Apply</button>`;
 document.body.appendChild(filterWindow);
-handleWindow({ window: filterWindow, x: 2, y: 10, width: 300, height: 600, deletable: false });
+handleWindow({ window: filterWindow, x: 2, y: 10, width: 350, height: 670, deletable: false });
 
 const inputs = {
     nameFilter: document.getElementById('nameFilter') as HTMLInputElement,
@@ -230,6 +240,10 @@ const inputs = {
     algoRatingMaxFilter: document.getElementById('algoMaxFilter') as HTMLInputElement,
     heuristicRatingMinFilter: document.getElementById('heuristicMinFilter') as HTMLInputElement,
     heuristicRatingMaxFilter: document.getElementById('heuristicMaxFilter') as HTMLInputElement,
+    algoInnerRatingMinFilter: document.getElementById('algoInnerMinFilter') as HTMLInputElement,
+    algoInnerRatingMaxFilter: document.getElementById('algoInnerMaxFilter') as HTMLInputElement,
+    heuristicInnerRatingMinFilter: document.getElementById('heuristicInnerMinFilter') as HTMLInputElement,
+    heuristicInnerRatingMaxFilter: document.getElementById('heuristicInnerMaxFilter') as HTMLInputElement,
     sortBy: document.getElementById('sortBy') as HTMLSelectElement,
     sortReverse: document.getElementById('reverse') as HTMLInputElement,
     limit: document.getElementById('limitFilter') as HTMLInputElement,
@@ -302,6 +316,18 @@ export function getParams() {
     if (inputs.heuristicRatingMaxFilter.value) {
         params.maxHeuristic = inputs.heuristicRatingMaxFilter.value;
     }
+    if (inputs.algoInnerRatingMinFilter.value) {
+        params.minInnerAlgo = mapRatingInv(Number(inputs.algoInnerRatingMinFilter.value)).toString();
+    }
+    if (inputs.algoInnerRatingMaxFilter.value) {
+        params.maxInnerAlgo = mapRatingInv(Number(inputs.algoInnerRatingMaxFilter.value)).toString();
+    }
+    if (inputs.heuristicInnerRatingMinFilter.value) {
+        params.minInnerHeuristic = mapRatingInv(Number(inputs.heuristicInnerRatingMinFilter.value)).toString();
+    }
+    if (inputs.heuristicInnerRatingMaxFilter.value) {
+        params.maxInnerHeuristic = mapRatingInv(Number(inputs.heuristicInnerRatingMaxFilter.value)).toString();
+    }
     if (inputs.sortBy.value) {
         params.sort = inputs.sortBy.value;
     }
@@ -349,6 +375,8 @@ function getUsers(isBack = false) {
                         <td>${getCountryFlag(user.country, true)} ${user.country}</td>
                         <td>${getUserRatingTag(user.algoRating)}</td>
                         <td>${getUserRatingTag(user.heuristicRating)}</td>
+                        <td>${user.algoAPerf !== null ? getUserRatingTag(mapRating(user.algoAPerf),true) : '-'}</td>
+                        <td>${user.heuristicAPerf !== null ? getUserRatingTag(mapRating(user.heuristicAPerf),true) : '-'}</td>
                         <td><button class="view-user" data-username="${user.name}">View</button></td>
                     `;
                 table.appendChild(row);
@@ -442,11 +470,11 @@ async function createUserStatisticsWindow(userName: string, x: number, y: number
             </tr>
             <tr>
                 <th>Algo APerf</th>
-                <td>${baseData.algoAPerf !== null ? baseData.algoAPerf.toFixed(2) : '-'}</td>
+                <td>${baseData.algoAPerf !== null ? getUserRatingTag(mapRating(baseData.algoAPerf),true) : '-'}</td>
             </tr>
             <tr>
                 <th>Heuristic APerf</th>
-                <td>${baseData.heuristicAPerf !== null ? baseData.heuristicAPerf.toFixed(2) : '-'}</td>
+                <td>${baseData.heuristicAPerf !== null ? getUserRatingTag(mapRating(baseData.heuristicAPerf),true) : '-'}</td>
             </tr>
             <tr>
                 <th>First AC Datetime</th>
@@ -525,13 +553,19 @@ function openUserAlgoHistory(user: string) {
         },
     });
 }
-function getUserRatingTag(rating: number) {
+function getUserRatingTag(rating: number, fixing: boolean = false) {
     if (rating === -1 || rating === null || rating === undefined) {
         return `<span class="user-rating" style="color: gray;">-</span>`;
     }
     const color = COLORS.find((c) => rating >= c.rating);
     if (color) {
+        if (fixing) {
+            rating = rating.toFixed(2) as unknown as number;
+        }
         return `<span class="user-rating" style="color: ${color.color};">${rating}</span>`;
+    }
+    if (fixing) {
+        rating = rating.toFixed(2) as unknown as number;
     }
     return `<span class="user-rating" style="color: black">${rating}</span>`;
 }

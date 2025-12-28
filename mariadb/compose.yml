@@ -1,0 +1,20 @@
+services:
+  db:
+    build:
+      context: .
+    ports:
+      - '3306:3306'
+    environment:
+      MARIADB_DATABASE: defaultdb
+      MARIADB_ROOT_PASSWORD: VRmQ!2Bbimf^vJ
+      TZ: Asia/Tokyo
+    volumes:
+      - ./initsql:/docker-entrypoint-initdb.d
+      - ./conf.d:/etc/mysql/conf.d
+      - db-volume:/var/lib/mysql
+    restart: always
+
+volumes:
+  db-volume:
+    name: mariadb-data
+    driver: local

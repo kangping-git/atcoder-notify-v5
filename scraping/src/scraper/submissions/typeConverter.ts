@@ -9,39 +9,58 @@ import {
     SubmissionWithoutTimeAndMemory,
     SubmissionWithTimeAndMemory,
 } from './getSubmissions';
+import { Database } from '../../database';
 
-export function convertPrismaSubmissionToScraperSubmission(
+export async function convertPrismaSubmissionToScraperSubmission(
     submission: Prisma.submissionsGetPayload<{}>,
-): Submission {
-    if (
-        submission.status === PrismaSubmissionStatus.CE ||
-        submission.status === PrismaSubmissionStatus.WJ ||
-        submission.status === PrismaSubmissionStatus.WR
-    ) {
-        return {
-            status: convertPrismaSubmissionStatusToScraper(submission.status),
-            contestId: submission.contestId,
-            problemId: submission.problemId,
-            datetime: submission.datetime,
-            userId: submission.userId,
-            language: submission.language,
-            score: submission.score,
-            codeLength: submission.codeLength,
-            submissionId: submission.submissionId,
-        } as SubmissionWithoutTimeAndMemory;
+): Promise<Submission> {
+    const db = Database.getDatabase();
+    const [userRecord, taskRecord] = await Promise.all([
+        db.user.findUnique({
+            where: { id: submission.userId },
+            select: { name: true },
+        }),
+        db.tasks.findUnique({
+            where: { id: submission.taskId },
+            select: { contestid: true, taskid: true },
+        }),
+    ]);
+
+    if (!userRecord) {
+        Main.getLogger().fatal(`User not found for submission ${submission.submissionId}`);
+        throw new Error(`User not found for submission ${submission.submissionId.toString()}`);
     }
-    return {
+
+    if (!taskRecord) {
+        Main.getLogger().fatal(`Task not found for submission ${submission.submissionId}`);
+        throw new Error(`Task not found for submission ${submission.submissionId.toString()}`);
+    }
+
+    const baseSubmission = {
         status: convertPrismaSubmissionStatusToScraper(submission.status),
-        contestId: submission.contestId,
-        problemId: submission.problemId,
+        contestId: taskRecord.contestid,
+        problemId: taskRecord.taskid,
         datetime: submission.datetime,
-        userId: submission.userId,
+        username: userRecord.name,
         language: submission.language,
         score: submission.score,
         codeLength: submission.codeLength,
+        submissionId: submission.submissionId,
+    };
+
+    if (
+        submission.status === PrismaSubmissionStatus.CE ||
+        submission.status === PrismaSubmissionStatus.WJ ||
+        submission.status === PrismaSubmissionStatus.WR ||
+        submission.status === PrismaSubmissionStatus.IE
+    ) {
+        return baseSubmission as SubmissionWithoutTimeAndMemory;
+    }
+
+    return {
+        ...baseSubmission,
         time: submission.time,
         memory: submission.memory,
-        submissionId: submission.submissionId,
     } as SubmissionWithTimeAndMemory;
 }
 
@@ -77,43 +96,66 @@ export function convertPrismaSubmissionStatusToScraper(
     }
 }
 
-export function convertScraperSubmissionToPrismaSubmission(
+export async function convertScraperSubmissionToPrismaSubmission(
     submission: Submission,
-): Prisma.submissionsGetPayload<{}> {
+): Promise<
+    Prisma.submissionsUncheckedCreateInput & Prisma.submissionsUncheckedUpdateInput
+> {
+    const db = Database.getDatabase();
+    let userRecord = await db.user.findFirst({
+        where: { name: submission.username },
+        select: { id: true },
+    });
+
+    if (!userRecord) {
+        userRecord = await db.user.create({
+            data: { name: submission.username },
+            select: { id: true },
+        });
+    }
+
+    const taskRecord = await db.tasks.findFirst({
+        where: { contestid: submission.contestId, taskid: submission.problemId },
+        select: { id: true },
+    });
+
+    if (!taskRecord) {
+        Main.getLogger().fatal(`Task not found for contest ${submission.contestId}, problem ${submission.problemId}`);
+        throw new Error(`Task not found for contest ${submission.contestId}, problem ${submission.problemId}`);
+    }
+
+    const sharedFields = {
+        submissionId: submission.submissionId,
+        status: convertScraperSubmissionStatusToPrisma(submission.status),
+        datetime: submission.datetime,
+        userId: userRecord.id,
+        codeLength: submission.codeLength,
+        language: submission.language,
+        score: submission.score,
+        taskId: taskRecord.id,
+    };
+
     if (
         submission.status === SubmissionStatus.CE ||
         submission.status === SubmissionStatus.WJ ||
-        submission.status === SubmissionStatus.WR
+        submission.status === SubmissionStatus.WR ||
+        submission.status === SubmissionStatus.IE
     ) {
-        return {
-            status: convertScraperSubmissionStatusToPrisma(submission.status),
-            contestId: submission.contestId,
-            problemId: submission.problemId,
-            datetime: submission.datetime,
-            userId: submission.userId,
-            codeLength: submission.codeLength,
-            language: submission.language,
-            score: submission.score,
+        const prismaSubmission = {
+            ...sharedFields,
             time: -1,
             memory: -1,
-            submissionId: submission.submissionId,
-        };
+        } satisfies Prisma.submissionsUncheckedCreateInput & Prisma.submissionsUncheckedUpdateInput;
+        return prismaSubmission;
     }
-    const submissionWithTimeAndMemory = submission as SubmissionWithTimeAndMemory;
 
-    return {
-        status: convertScraperSubmissionStatusToPrisma(submissionWithTimeAndMemory.status),
-        contestId: submissionWithTimeAndMemory.contestId,
-        problemId: submissionWithTimeAndMemory.problemId,
-        datetime: submissionWithTimeAndMemory.datetime,
-        userId: submissionWithTimeAndMemory.userId,
-        codeLength: submissionWithTimeAndMemory.codeLength,
-        language: submissionWithTimeAndMemory.language,
-        score: submissionWithTimeAndMemory.score,
+    const submissionWithTimeAndMemory = submission as SubmissionWithTimeAndMemory;
+    const prismaSubmission = {
+        ...sharedFields,
         time: submissionWithTimeAndMemory.time,
         memory: submissionWithTimeAndMemory.memory,
-        submissionId: submissionWithTimeAndMemory.submissionId,
-    };
+    } satisfies Prisma.submissionsUncheckedCreateInput & Prisma.submissionsUncheckedUpdateInput;
+    return prismaSubmission;
 }
 
 export function convertScraperSubmissionStatusToPrisma(

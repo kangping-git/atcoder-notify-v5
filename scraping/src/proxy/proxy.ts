@@ -11,7 +11,7 @@ export namespace Proxy {
         logger = Main.getLogger().child('Proxy');
         SocksHTTPProxy = new SocksProxyAgent(url);
     }
-    export function get(url: string, cookie: string, withText = false) {
+    export function get(url: string, cookie: string) {
         const agent = SocksHTTPProxy || undefined;
         if (agent) {
             logger.info('Using proxy', { url });
@@ -20,9 +20,14 @@ export namespace Proxy {
         }
 
         return axios.get(url, {
+            proxy: false,
             httpsAgent: agent,
-            headers: { Cookie: cookie },
-            responseType: withText ? void 0 : 'text',
+            headers: { 
+                Cookie: cookie,
+                'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64)',
+                'Accept': 'application/json,text/plain,*/*'
+            },
+            responseType: 'text'
         });
     }
     export function isProxyEnabled() {

@@ -9,6 +9,8 @@ import http from 'http';
 import { addSubmissionListener } from './scraper/submissions/getSubmissions';
 import { config } from 'dotenv';
 import path from 'path';
+import { rebuildUsersTable } from './build_db/users';
+import { rebuildTasksTable } from './build_db/tasks';
 config({ path: path.join(__dirname, '../../.env') });
 
 export namespace Main {
@@ -24,7 +26,7 @@ export namespace Main {
         logger.info('Starting background tasks...');
         Proxy.initProxy(process.env.SOCK5_PROXY!);
         await Database.initDatabase();
-        // rebuildUsersTable();
+
         await AtCoderScraper.initAtCoderScraper();
         addSubmissionListener((submission) => {
             clients.forEach((client) => {

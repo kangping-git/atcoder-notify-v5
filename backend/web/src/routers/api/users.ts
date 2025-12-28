@@ -42,7 +42,23 @@ router.get(['/', '/count', '/histogram', '/deviation'], async (req, res) => {
             if (typeof val === 'string' && val !== '') return parseInt(val, 10);
             return undefined;
         }, z.number().optional()),
-        sort: z.enum(['algoRating', 'heuristicRating', 'name', '-algoRating', '-heuristicRating', '-name']).default('algoRating'),
+        minInnerAlgo: z.preprocess((val) => {
+            if (typeof val === 'string' && val !== '') return parseFloat(val);
+            return undefined;
+        }, z.number().optional()),
+        maxInnerAlgo: z.preprocess((val) => {
+            if (typeof val === 'string' && val !== '') return parseFloat(val);
+            return undefined;
+        }, z.number().optional()),
+        minInnerHeuristic: z.preprocess((val) => {
+            if (typeof val === 'string' && val !== '') return parseFloat(val);
+            return undefined;
+        }, z.number().optional()),
+        maxInnerHeuristic: z.preprocess((val) => {
+            if (typeof val === 'string' && val !== '') return parseFloat(val);
+            return undefined;
+        }, z.number().optional()),
+        sort: z.enum(['algoRating', 'heuristicRating', 'algoInnerRating', 'heuristicInnerRating', 'name', '-algoRating', '-heuristicRating', '-algoInnerRating', '-heuristicInnerRating', '-name']).default('algoRating'),
         limit: z.preprocess((val) => {
             if (typeof val === 'string' && val !== '') return parseInt(val, 10);
             return undefined;
@@ -58,9 +74,9 @@ router.get(['/', '/count', '/histogram', '/deviation'], async (req, res) => {
         res.status(400).json({ error: 'Invalid query parameters', details: query.error.errors });
         return;
     }
-    let { sort, limit, cursor, q, country, minAlgo, maxAlgo, minHeuristic, maxHeuristic, isActive } = query.data;
+    let { sort, limit, cursor, q, country, minAlgo, maxAlgo, minHeuristic, maxHeuristic, isActive, minInnerAlgo, maxInnerAlgo, minInnerHeuristic, maxInnerHeuristic } = query.data;
     const isAsc = !sort.startsWith('-');
-    const sortField0 = sort.replace('-', '');
+    let sortField0 = sort.replace('-', '');
     const twoYearsAgo = new Date();
     twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
     if (req.path == '/count') {
@@ -69,6 +85,8 @@ router.get(['/', '/count', '/histogram', '/deviation'], async (req, res) => {
             country: country || undefined,
             algoRating: { gte: minAlgo, lte: maxAlgo },
             heuristicRating: { gte: minHeuristic, lte: maxHeuristic },
+            algoAPerf: { gte: minInnerAlgo, lte: maxInnerAlgo },
+            heuristicAPerf: { gte: minInnerHeuristic, lte: maxInnerHeuristic },
             lastContestTime: isActive ? { gte: twoYearsAgo } : undefined,
         };
         const count = await Database.getDatabase().user.count({ where: baseWhere });
@@ -148,6 +166,8 @@ router.get(['/', '/count', '/histogram', '/deviation'], async (req, res) => {
             country: country || undefined,
             algoRating: { gte: minAlgo, lte: maxAlgo },
             heuristicRating: { gte: minHeuristic, lte: maxHeuristic },
+            algoAPerf: { gte: minInnerAlgo, lte: maxInnerAlgo },
+            heuristicAPerf: { gte: minInnerHeuristic, lte: maxInnerHeuristic },
             lastContestTime: isActive ? { gte: twoYearsAgo } : undefined,
         };
         const algoHistogram = await Database.getDatabase().user.groupBy({
@@ -179,10 +199,18 @@ router.get(['/', '/count', '/histogram', '/deviation'], async (req, res) => {
         country: country || undefined,
         algoRating: { gte: minAlgo, lte: maxAlgo },
         heuristicRating: { gte: minHeuristic, lte: maxHeuristic },
+        algoAPerf: { gte: minInnerAlgo, lte: maxInnerAlgo },
+        heuristicAPerf: { gte: minInnerHeuristic, lte: maxInnerHeuristic },
         lastContestTime: isActive ? { gte: twoYearsAgo } : undefined,
     };
 
     let cursorFilter: any = {};
+    console.log(decoded)
+    if (sortField0 === 'algoInnerRating') {
+        sortField0 = 'algoAPerf';
+    } else if (sortField0 === 'heuristicInnerRating') {
+        sortField0 = 'heuristicAPerf';
+    }
     if (decoded) {
         if (sortField0 === 'algoRating') {
             cursorFilter = {
@@ -204,7 +232,27 @@ router.get(['/', '/count', '/histogram', '/deviation'], async (req, res) => {
                     },
                 ],
             };
-        } else {
+        } else if (sortField0 === 'algoAPerf') {
+            cursorFilter = {
+                OR: [
+                    { algoAPerf: { lt: decoded.algoAPerf } },
+                    {
+                        algoAPerf: { equals: decoded.algoAPerf },
+                        name: { gt: decoded.name },
+                    },
+                ]
+            };
+        } else if (sortField0 === 'heuristicAPerf') {
+            cursorFilter = {
+                OR: [
+                    { heuristicAPerf: { lt: decoded.heuristicAPerf } },
+                    {
+                        heuristicAPerf: { equals: decoded.heuristicAPerf },
+                        name: { gt: decoded.name },
+                    },
+                ]
+            };
+        } else{
             cursorFilter = { name: { [isAsc ? 'gt' : 'lt']: decoded.name } };
         }
     }
@@ -224,6 +272,8 @@ router.get(['/', '/count', '/histogram', '/deviation'], async (req, res) => {
             country: true,
             algoRating: true,
             heuristicRating: true,
+            algoAPerf: true,
+            heuristicAPerf: true,
         },
         take: limit,
     });
@@ -237,7 +287,7 @@ router.get(['/', '/count', '/histogram', '/deviation'], async (req, res) => {
             [key: string]: any;
         };
         const payload: any = { name: last.name };
-        if (sortField0 !== 'name' && (sortField0 === 'algoRating' || sortField0 === 'heuristicRating')) {
+        if (sortField0 !== 'name' && (sortField0 === 'algoRating' || sortField0 === 'heuristicRating' || sortField0 === 'algoInnerRating' || sortField0 === 'heuristicInnerRating')) {
             payload[sortField0] = last[sortField0];
         }
         nextCursor = Buffer.from(JSON.stringify(payload)).toString('base64');
@@ -259,7 +309,7 @@ router.get('/detail/:name', async (req, res) => {
             heuristicRating: true,
             algoAPerf: true,
             heuristicAPerf: true,
-            lastContestTime: true,            
+            lastContestTime: true,
         },
     });
     if (!userData) {
@@ -363,7 +413,7 @@ router.get(['/detail/:name/submissions', '/detail/:name/submissions/count'], asy
     }
     const { contestId, problemId, status, language, since, until, cursor, limit } = query.data;
     const where: any = {
-        userId: name,
+        user: { name },
         contestId: contestId || undefined,
         problemId: problemId || undefined,
         status: status || undefined,
@@ -398,8 +448,7 @@ router.get(['/detail/:name/submissions', '/detail/:name/submissions/count'], asy
         take: limit,
         select: {
             submissionId: true,
-            contestId: true,
-            problemId: true,
+            task: true,
             status: true,
             codeLength: true,
             datetime: true,
@@ -408,6 +457,7 @@ router.get(['/detail/:name/submissions', '/detail/:name/submissions/count'], asy
             time: true,
             score: true,
             userId: true,
+            user: true
         },
     });
     if (data.length === 0) {
@@ -419,6 +469,8 @@ router.get(['/detail/:name/submissions', '/detail/:name/submissions/count'], asy
         submissions: data.slice(0, limit).map((sub) =>
             Object.assign(sub, {
                 submissionId: String(sub.submissionId),
+                problemId: String(sub.task.taskid),
+                contestId: String(sub.task.contestid),
             }),
         ),
         nextCursor,
@@ -432,27 +484,31 @@ router.get('/detail/:name/submissions/:submissionId', async (req, res) => {
     }
     const submission: any = await Database.getDatabase().submissions.findUnique({
         where: {
-            userId: name,
+            user: { name },
             submissionId: BigInt(submissionId),
         },
         select: {
             submissionId: true,
-            contestId: true,
-            problemId: true,
+            task: {
+                include: {
+                    contest: true,
+                }
+            },
             status: true,
             codeLength: true,
             datetime: true,
-            contest: true,
             language: true,
             memory: true,
             time: true,
             score: true,
             user: true,
-            userId: true,
         },
     });
     if (submission) {
         submission.submissionId = submission.submissionId.toString();
+        submission.problemId = submission.task.taskid;
+        submission.contestId = submission.task.contestid;
+        submission.contest = submission.task.contest;
     }
     res.json(submission);
 });

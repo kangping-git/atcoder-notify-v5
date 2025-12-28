@@ -9,7 +9,7 @@ export class SubmissionGraphFeature implements GraphFeature {
     /** もっとも背面にしたいので -20 */
     readonly zIndex = -20;
 
-    constructor(private graph: BaseHistoryGraph) {}
+    constructor(private graph: BaseHistoryGraph) { }
 
     async render(): Promise<string> {
         const { submissions } = await this.fetchSubmissions();
@@ -110,7 +110,7 @@ export class SubmissionGraphFeature implements GraphFeature {
         const subs = (await Database.getDatabase().submissions.findMany({
             where: {
                 user: { name: (this.graph as any).userName },
-                contest: { isHeuristic: (this.graph as any).isHeuristic },
+                task: { contest: { isHeuristic: (this.graph as any).isHeuristic } },
             },
             orderBy: { datetime: 'asc' },
         })) as SubmissionRecord[];

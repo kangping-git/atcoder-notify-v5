@@ -48,7 +48,7 @@ export namespace AtCoderScraper {
             where: {
                 endTime: {
                     lte: new Date(),
-                    gte: new Date(new Date().setDate(new Date().getDate() - 14)),
+                    // gte: new Date(new Date().setDate(new Date().getDate() - 14)),
                 },
                 resultPageHash: isNull ? void 0 : null,
             },
@@ -64,12 +64,23 @@ export namespace AtCoderScraper {
             orderBy: { endTime: 'asc' },
         });
         crawlingContestResults = true;
-        for (const contest of contests) {
-            await ScraperContestResult.crawlContestResult(contest.id);
-        }
-        for (const contest of contestsUnCrawledPDF) {
-            await ScraperContest.getProblemPDF(contest.id);
-        }
+        const concurrency = 3;
+        let idx = 0;
+        const workers = Array.from({ length: concurrency }, () =>
+            (async () => {
+            while (true) {
+                const i = idx++;
+                if (i >= contests.length) break;
+                const contest = contests[i];
+                try {
+                    await ScraperContestResult.crawlContestResult(contest.id);
+                } catch (err: any) {
+                    logger.error(err, err.cause?.code, err.cause?.options, `Failed to crawl contest ${contest.id}`);
+                }
+            }
+            })()
+        );
+        await Promise.all(workers);
 
         crawlingContestResults = false;
     }
@@ -228,10 +239,13 @@ export namespace AtCoderScraper {
                         },
                         user: { id: user.linkedAtCoderUserId! },
                     },
+                    select: {
+                        task: true
+                    }
                 });
                 let data2Map: { [key: string]: { count: number; color: string; label: string } } = {};
                 for (let i of submissions2) {
-                    const problemId = i.problemId;
+                    const problemId = i.task.taskid;
                     const diffObj = difficulties[problemId];
                     let difficulty = 0;
                     if (!diffObj || !diffObj.difficulty) {

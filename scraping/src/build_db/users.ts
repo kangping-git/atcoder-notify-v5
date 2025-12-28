@@ -2,7 +2,7 @@ import { Database } from '../database';
 
 export async function rebuildUsersTable() {
     let cursor = 0;
-    const batchSize = 1000;
+    const batchSize = 100;
     const contestEndTimes = new Map<string, Date>();
     const contests = await Database.getDatabase().contest.findMany();
     for (const contest of contests) {
@@ -29,7 +29,7 @@ export async function rebuildUsersTable() {
             break;
         }
         for (const user of users) {
-            const history = user.ratings.filter((v) => v.isRated);
+            const history = user.ratings.filter((change) => change.isRated);
             history.sort((a, b) => contestEndTimes.get(a.contestId)!.getTime() - contestEndTimes.get(b.contestId)!.getTime());
             let algoRating = -1;
             let heuristicRating = -1;
@@ -75,6 +75,25 @@ export async function rebuildUsersTable() {
                     country: user.country,
                 },
             });
+            // await Database.getDatabase().userRatingChangeEvent.deleteMany({
+            //     where: {
+            //         userId: user.id,
+            //     },
+            // });
+            // for (const change of history) {
+            //     await Database.getDatabase().userRatingChangeEvent.create({
+            //         data: {
+            //             contestId: change.contestId,
+            //             userId: user.id,
+            //             oldRating: change.oldRating,
+            //             newRating: change.newRating,
+            //             performance: change.performance,
+            //             InnerPerformance: change.InnerPerformance,
+            //             isHeuristic: change.isHeuristic,
+            //             updatedAt: contestEndTimes.get(change.contestId) || new Date(),
+            //         },
+            //     });
+            // }
         }
         cursor = users[users.length - 1].id + 1;
         console.log(`Processed ${cursor} users`);

@@ -63,7 +63,7 @@ router.get('/', async (req, res) => {
     }
     const { user, contestId, problemId, status, language, since, until, cursor, limit } = query.data;
     const where: any = {
-        userId: user,
+        user: { name: user },
         contestId: contestId || undefined,
         problemId: problemId || undefined,
         status: status || undefined,
@@ -94,8 +94,6 @@ router.get('/', async (req, res) => {
         take: limit,
         select: {
             submissionId: true,
-            contestId: true,
-            problemId: true,
             status: true,
             codeLength: true,
             datetime: true,
@@ -103,6 +101,8 @@ router.get('/', async (req, res) => {
             memory: true,
             time: true,
             score: true,
+            user: true,
+            task: true
         },
     });
     if (data.length === 0) {
@@ -114,6 +114,8 @@ router.get('/', async (req, res) => {
         submissions: data.slice(0, limit).map((sub) =>
             Object.assign(sub, {
                 submissionId: String(sub.submissionId),
+                problemId: String(sub.task.taskid),
+                contestId: String(sub.task.contestid),
             }),
         ),
         nextCursor,
@@ -144,22 +146,26 @@ router.get('/:submissionId', async (req, res) => {
         },
         select: {
             submissionId: true,
-            contestId: true,
-            problemId: true,
+            task: {
+                include: {
+                    contest: true,
+                }
+            },
             status: true,
             codeLength: true,
             datetime: true,
-            contest: true,
             language: true,
             memory: true,
             time: true,
             score: true,
             user: true,
-            userId: true,
         },
     });
     if (submission) {
         submission.submissionId = submission.submissionId.toString();
+        submission.problemId = submission.task.taskid;
+        submission.contestId = submission.task.contestid;
+        submission.contest = submission.task.contest;
     }
     res.json(submission);
 });

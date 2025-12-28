@@ -118,9 +118,10 @@ export namespace ScraperContestResult {
             }
             let userId = userIds.get(UserScreenName.toLowerCase());
             if (!userId) {
-                userId = (
-                    await Database.getDatabase().user.create({
-                        data: {
+                try {
+                    const upserted = await Database.getDatabase().user.upsert({
+                        where: { name: UserScreenName },
+                        create: {
                             name: UserScreenName,
                             country: result.Country,
                             lastContestTime: new Date(result.EndTime),
@@ -129,46 +130,54 @@ export namespace ScraperContestResult {
                             heuristicRating: contestData.isHeuristic ? result.NewRating : void 0,
                             heuristicAPerf: contestData.isHeuristic ? Performance : void 0,
                         },
-                    })
-                ).id;
-            } else {
-                if (IsRated){
-                    const performances = await Database.getDatabase().userRatingChangeEvent.findMany({
-                        where: {
-                            userId: userId,
-                            isHeuristic: contestData.isHeuristic,
-                            isRated: true
-                        },
+                        update: {},
                     });
-                    let aperf = Performance;
-                    if (performances.length > 0) {
-                        performances.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
-                        const performanceValues = performances.map((p) => p.InnerPerformance);
-                        let Aperf = 0;
-                        let Count = 0;
-                        const reversedHistory = [...performanceValues].reverse();
-                        for (const change of reversedHistory) {
-                            Count += 1;
-                            Aperf += change * 0.9 ** Count;
-                        }
-                        if (Count > 0) {
-                            Aperf /= 9 * (1 - 0.9 ** Count);
-                        }
-                        aperf = Aperf;
-                    }
-                    await Database.getDatabase().user.update({
-                        where: {
-                            id: userId,
-                        },
-                        data: {
-                            lastContestTime: new Date(result.EndTime),
-                            algoRating: contestData.isHeuristic ? void 0 : result.NewRating,
-                            heuristicRating: contestData.isHeuristic ? result.NewRating : void 0,
-                            algoAPerf: contestData.isHeuristic ? void 0 : aperf,
-                            heuristicAPerf: contestData.isHeuristic ? aperf : void 0,
-                        },
-                    });
+                    userId = upserted.id;
+                } catch (e: any) {
+                    // 競合（P2002）などが発生した場合は既存ユーザーを取得
+                    const existing = await Database.getDatabase().user.findUnique({ where: { name: UserScreenName } });
+                    if (!existing) throw e;
+                    userId = existing.id;
                 }
+                // マップを更新して後続の重複作成を防止
+                userIds.set(UserScreenName.toLowerCase(), userId);
+            }
+
+            // Rated の場合は新規/既存に関わらずユーザー情報を更新
+            if (IsRated) {
+                const performances = await Database.getDatabase().userRatingChangeEvent.findMany({
+                    where: {
+                        userId: userId!,
+                        isHeuristic: contestData.isHeuristic,
+                        isRated: true,
+                    },
+                });
+                let aperf = Performance;
+                if (performances.length > 0) {
+                    performances.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
+                    const performanceValues = performances.map((p) => p.InnerPerformance);
+                    let Aperf = 0;
+                    let Count = 0;
+                    const reversedHistory = [...performanceValues].reverse();
+                    for (const change of reversedHistory) {
+                        Count += 1;
+                        Aperf += change * 0.9 ** Count;
+                    }
+                    if (Count > 0) {
+                        Aperf /= 9 * (1 - 0.9 ** Count);
+                    }
+                    aperf = Aperf;
+                }
+                await Database.getDatabase().user.update({
+                    where: { id: userId! },
+                    data: {
+                        lastContestTime: new Date(result.EndTime),
+                        algoRating: contestData.isHeuristic ? void 0 : result.NewRating,
+                        heuristicRating: contestData.isHeuristic ? result.NewRating : void 0,
+                        algoAPerf: contestData.isHeuristic ? void 0 : aperf,
+                        heuristicAPerf: contestData.isHeuristic ? aperf : void 0,
+                    },
+                });
             }
             if (userId === undefined) {
                 throw new Error(`userId for ${UserScreenName} should not be undefined`);

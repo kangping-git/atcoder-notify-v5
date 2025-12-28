@@ -89,7 +89,11 @@ input[type='number'] {
 #algoMinFilter,
 #algoMaxFilter,
 #heuristicMinFilter,
-#heuristicMaxFilter {
+#heuristicMaxFilter,
+#algoInnerMinFilter,
+#algoInnerMaxFilter,
+#heuristicInnerMinFilter,
+#heuristicInnerMaxFilter {
     width: 50px;
     display: inline-block;
     margin-right: 0.5rem;

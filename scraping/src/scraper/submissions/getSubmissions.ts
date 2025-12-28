@@ -22,7 +22,7 @@ export async function CrawlAllSubmissions(contest: string): Promise<void> {
             (
                 await Database.getDatabase().submissions.findMany({
                     where: {
-                        contestId: contest,
+                        task: { contestid: contest },
                         status: {
                             in: ['WR', 'WJ'],
                         },
@@ -55,12 +55,12 @@ export async function CrawlAllSubmissions(contest: string): Promise<void> {
                     }
                     try {
                         await Database.getDatabase().user.upsert({
-                            where: { name: submissionData.userId },
-                            create: { name: submissionData.userId },
+                            where: { name: submissionData.username },
+                            create: { name: submissionData.username },
                             update: {},
                         });
 
-                        const prismaSubmission = convertScraperSubmissionToPrismaSubmission(submissionData);
+                        const prismaSubmission = await convertScraperSubmissionToPrismaSubmission(submissionData);
 
                         const beforeSubmission = await Database.getDatabase().submissions.findFirst({
                             where: { submissionId: prismaSubmission.submissionId },
@@ -74,6 +74,14 @@ export async function CrawlAllSubmissions(contest: string): Promise<void> {
 
                         if (!beforeSubmission || beforeSubmission.status !== submissionData.status) {
                             submissionListeners.forEach((listener) => listener(submissionData));
+                        }
+                        if (!beforeSubmission) {
+                            await Database.getDatabase().user.update({
+                                where: { name: submissionData.username },
+                                data: {
+                                    userSubmissionCount: { increment: 1 }
+                                }
+                            })
                         }
                     } catch (e) {
                         AtCoderScraper.logger.error(`Failed to upsert submission ${submissionId} during finalization`, { error: e });
@@ -112,18 +120,18 @@ async function CrawlSubmissionWorker(contest: string, page: number, waitingJudge
     const submissionIds = submissions.map((submission) => submission.submissionId);
     const existingSubmissions = await Database.getDatabase().submissions.findMany({
         where: {
-            contestId: contest,
+            task: { contestid: contest },
             submissionId: { in: submissionIds },
         },
     });
     const existingSubmissionIds = new Set(existingSubmissions.map((submission) => submission.submissionId));
     const unknownSubmissions = submissions.filter((submission) => !existingSubmissionIds.has(submission.submissionId));
     for (const submission of submissions) {
-        const prismaSubmission = convertScraperSubmissionToPrismaSubmission(submission);
+        const prismaSubmission = await convertScraperSubmissionToPrismaSubmission(submission);
         try {
             await Database.getDatabase().user.upsert({
-                where: { name: submission.userId },
-                create: { name: submission.userId },
+                where: { name: submission.username },
+                create: { name: submission.username },
                 update: {},
             });
             let beforeSubmission = await Database.getDatabase().submissions.findFirst({
@@ -172,17 +180,17 @@ export enum SubmissionStatus {
 }
 export type SubmissionWithTimeAndMemory = {
     status:
-        | SubmissionStatus.AC
-        | SubmissionStatus.WA
-        | SubmissionStatus.TLE
-        | SubmissionStatus.MLE
-        | SubmissionStatus.RE
-        | SubmissionStatus.QLE
-        | SubmissionStatus.OLE;
+    | SubmissionStatus.AC
+    | SubmissionStatus.WA
+    | SubmissionStatus.TLE
+    | SubmissionStatus.MLE
+    | SubmissionStatus.RE
+    | SubmissionStatus.QLE
+    | SubmissionStatus.OLE;
     contestId: string;
     problemId: string;
     datetime: Date;
-    userId: string;
+    username: string;
     language: string;
     score: number;
     codeLength: number;
@@ -195,7 +203,7 @@ export type SubmissionWithoutTimeAndMemory = {
     contestId: string;
     problemId: string;
     datetime: Date;
-    userId: string;
+    username: string;
     language: string;
     score: number;
     codeLength: number;
@@ -297,7 +305,7 @@ export function analyzeSubmission(row: Element): Submission {
             contestId,
             problemId,
             datetime,
-            userId,
+            username: userId,
             language,
             score,
             codeLength,
@@ -305,16 +313,16 @@ export function analyzeSubmission(row: Element): Submission {
         };
     } else {
         // For successful/failed submissions, parse additional fields.
-        const timeText = $(cells[7]).text().replace('ms', '').trim();
+        const timeText = $(cells[7]).text().match(/[\d]+/g)?.[0] || '-1';
         const time = parseInt(timeText, 10);
-        const memoryText = $(cells[8]).text().replace('KB', '').trim();
+        const memoryText = $(cells[8]).text().match(/[\d]+/g)?.[0] || '-1';
         const memory = parseInt(memoryText, 10);
         return {
             status,
             contestId,
             problemId,
             datetime,
-            userId,
+            username: userId,
             language,
             score,
             codeLength,
@@ -376,7 +384,7 @@ export async function getSubmission(contestId: string, submissionId: string) {
             }
             case 'User': {
                 const href = cell.find('a').attr('href') || '';
-                info.userId = href.split('/')[2] || cell.text().trim();
+                info.username = href.split('/')[2] || cell.text().trim();
                 break;
             }
             case 'Language': {
@@ -407,7 +415,7 @@ export async function getSubmission(contestId: string, submissionId: string) {
                 ) {
                     // For successful/failed submissions, try to parse additional fields defensively.
                     try {
-                        const timeText = cell.next().find('td').text().replace('ms', '').trim();
+                        const timeText = cell.next().find('td').text().match(/[\d]+/g)?.[0] || '0';
                         const timeParsed = parseInt(timeText, 10);
                         info.time = Number.isNaN(timeParsed) ? 0 : timeParsed;
                     } catch (err) {
@@ -415,7 +423,7 @@ export async function getSubmission(contestId: string, submissionId: string) {
                         info.time = 0;
                     }
                     try {
-                        const memoryText = cell.next().next().find('td').text().replace('KB', '').trim();
+                        const memoryText = cell.next().next().find('td').text().match(/[\d]+/g)?.[0] || '0';
                         const memParsed = parseInt(memoryText, 10);
                         info.memory = Number.isNaN(memParsed) ? 0 : memParsed;
                     } catch (err) {

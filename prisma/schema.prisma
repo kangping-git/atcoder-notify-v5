@@ -1,4 +1,3 @@
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,6 +6,7 @@ datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
 }
+
 enum SubmissionStatus {
   AC
   WA
@@ -20,6 +20,7 @@ enum SubmissionStatus {
   WJ
   WR
 }
+
 enum contestType {
   ABC
   ARC
@@ -31,9 +32,9 @@ model ApiKey {
   id        Int      @id @default(autoincrement())
   key       String   @unique
   admin     Boolean  @default(false)
-  rateLimit Int      @default(1000) 
+  rateLimit Int      @default(1000)
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 }
 
 model config {
@@ -41,22 +42,22 @@ model config {
   key       String   @unique
   value     String   @db.LongText
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 }
+
 model submissions {
-  submissionId BigInt @id
+  submissionId BigInt           @id
   status       SubmissionStatus
-  contestId    String
-  contest      Contest @relation(fields: [contestId], references: [id])
-  problemId    String
+  taskId       Int              @default(0)
+  task         Tasks            @relation(fields: [taskId], references: [id])
   datetime     DateTime
-  userId       String
-  user         User @relation(fields: [userId], references: [name])
+  userId       Int              @default(-1) @map("userNumber")
+  user         User             @relation(fields: [userId], references: [id])
   language     String
   score        Float
   codeLength   Int
-  time         Int   @default(-1)
-  memory       Int   @default(-1)
+  time         Int              @default(-1)
+  memory       Int              @default(-1)
 
   @@index([userId], name: "userId")
   @@index([datetime], name: "datetime")
@@ -66,150 +67,172 @@ model submissions {
   @@index([time], name: "time")
   @@index([memory], name: "memory")
   @@index([codeLength], name: "codeLength")
-  @@index([contestId], name: "contestId")
-  @@index([problemId], name: "problemId")
+  @@index([taskId], name: "taskId")
+  @@index([taskId, language, time, status], name: "task_language_time_status_idx")
 }
+
 model Contest {
-  id                String   @id
-  title             String
-  ratingRangeBegin  Int
-  ratingRangeEnd    Int
+  id               String @id
+  title            String
+  ratingRangeBegin Int
+  ratingRangeEnd   Int
 
-  isHeuristic       Boolean @default(false)
-  contestType       contestType
+  isHeuristic Boolean     @default(false)
+  contestType contestType
 
-  lastSubmissionCrawlTime  DateTime?
-  submissions       submissions[]
-  users             User[]
+  lastSubmissionCrawlTime DateTime?
+  users                   User[]
 
-  startTime         DateTime
-  endTime           DateTime
-  duration          Int
+  startTime DateTime
+  endTime   DateTime
+  duration  Int
 
   resultPageHash    String?
   ratingChangeEvent userRatingChangeEvent[]
-  crawledPDF        Boolean @default(false)
+  crawledPDF        Boolean                 @default(false)
 
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  Tasks Tasks[]
 }
+
 model User {
-  id              Int   @id @default(autoincrement())
-  name            String   @unique
-  algoRating      Int @default(-1)
-  heuristicRating Int @default(-1)
+  id              Int       @id @default(autoincrement())
+  name            String    @unique
+  algoRating      Int       @default(-1)
+  heuristicRating Int       @default(-1)
   algoAPerf       Float?
   heuristicAPerf  Float?
-  country         String  @default("Unknown")
+  country         String    @default("Unknown")
   lastContestTime DateTime?
 
   linkedDiscordAccounts discordServerLinkedAccount[]
 
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  userSubmissionCount Int @default(0)
 
   submissions submissions[]
   contests    Contest[]
-  ratings    userRatingChangeEvent[]
+  ratings     userRatingChangeEvent[]
 
-  linked     KickyUser[]
+  linked KickyUser[]
 }
+
 model userRatingChangeEvent {
-  id        Int      @id @default(autoincrement())
-  userId    Int
-  user      User     @relation(fields: [userId], references: [id])
-  oldRating    Int
-  newRating    Int
-  performance  Int
+  id               Int      @id @default(autoincrement())
+  userId           Int
+  user             User     @relation(fields: [userId], references: [id])
+  oldRating        Int
+  newRating        Int
+  performance      Int
   InnerPerformance Int
-  isHeuristic Boolean @default(false)
-  contestId String
-  contest   Contest @relation(fields: [contestId], references: [id])
-  place Int @default(0)
-  isRated  Boolean @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt @default(now())
+  isHeuristic      Boolean  @default(false)
+  contestId        String
+  contest          Contest  @relation(fields: [contestId], references: [id])
+  place            Int      @default(0)
+  isRated          Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @default(now()) @updatedAt
+}
+
+model Tasks {
+  id          Int           @id @default(autoincrement())
+  contestid   String
+  contest     Contest       @relation(fields: [contestid], references: [id])
+  taskid      String
+  submissions submissions[]
+
+  @@index([contestid, taskid])
 }
 
 model KickyInviteCode {
   id        Int      @id @default(autoincrement())
   code      String   @unique
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 }
-model KickyUser {
-  id        Int      @id @default(autoincrement())
-  name      String   @unique
 
-  password  String
-  salt      String
-  email     String
+model KickyUser {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+
+  password String
+  salt     String
+  email    String
 
   twitterOAuthTokenSecret  String?
   twitterOAuthAccessToken  String?
   twitterOAuthAccessSecret String?
   twitterOAuthUsername     String?
 
-  linkedAtCoderUserId  Int?
-  linkedAtCoderUser    User? @relation(fields: [linkedAtCoderUserId], references: [id])
+  linkedAtCoderUserId Int?
+  linkedAtCoderUser   User? @relation(fields: [linkedAtCoderUserId], references: [id])
 
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt @default(now())
-  
+  updatedAt DateTime @default(now()) @updatedAt
+
   sessionData SessionData[]
   submissions KickyJudgeSubmission[]
 }
+
 model KickyJudgeContest {
-  id        String   @id
+  id        String           @id
   title     String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt @default(now())
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @default(now()) @updatedAt
   tasks     KickyJudgeTask[]
 }
+
 model KickyJudgeTask {
-  id        String   @id
-  title     String
-  contestId String
-  contest   KickyJudgeContest @relation(fields: [contestId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt @default(now())
+  id          String                 @id
+  title       String
+  contestId   String
+  contest     KickyJudgeContest      @relation(fields: [contestId], references: [id])
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @default(now()) @updatedAt
   submissions KickyJudgeSubmission[]
 }
+
 model KickyJudgeSubmission {
-  id        String   @id
-  taskId    String
-  task      KickyJudgeTask @relation(fields: [taskId], references: [id])
-  userId    String
-  user      KickyUser @relation(fields: [userId], references: [name])
-  status    SubmissionStatus
-  datetime  DateTime
-  language  String
-  score     Float
+  id         String           @id
+  taskId     String
+  task       KickyJudgeTask   @relation(fields: [taskId], references: [id])
+  userId     String
+  user       KickyUser        @relation(fields: [userId], references: [name])
+  status     SubmissionStatus
+  datetime   DateTime
+  language   String
+  score      Float
   codeLength Int
 
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 }
-model SessionData {
-  id          Int    @default(autoincrement()) @id
-  sid         String @unique
-  userId      Int?
-  user        KickyUser?  @relation(fields: [userId], references: [id])
 
-  expiresAt   DateTime
+model SessionData {
+  id     Int        @id @default(autoincrement())
+  sid    String     @unique
+  userId Int?
+  user   KickyUser? @relation(fields: [userId], references: [id])
+
+  expiresAt DateTime
 }
 
 model discordServerConfig {
-  id                     String @unique
+  id                     String                       @unique
   ac_notify_channel      String?
   contest_notify_channel String?
   linkedUsers            discordServerLinkedAccount[]
 }
+
 model discordServerLinkedAccount {
-  id         Int     @default(autoincrement()) @id
-  LinkDiscordGuildId  String
-  LinkDiscordGuild  discordServerConfig @relation(fields: [LinkDiscordGuildId], references: [id])
-  AtCoderUserId     Int
-  AtCoderUser       User   @relation(fields: [AtCoderUserId], references: [id])
-  DiscordAccountId  String
+  id                 Int                 @id @default(autoincrement())
+  LinkDiscordGuildId String
+  LinkDiscordGuild   discordServerConfig @relation(fields: [LinkDiscordGuildId], references: [id])
+  AtCoderUserId      Int
+  AtCoderUser        User                @relation(fields: [AtCoderUserId], references: [id])
+  DiscordAccountId   String
 }
