@@ -22,6 +22,24 @@ services:
         condition: service_started
     restart: unless-stopped
 
+  discordbot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: atcoder-notify-v5:latest
+    command: ["npm", "run", "start:discord"]
+    environment:
+      TOKEN: ${TOKEN:?Set TOKEN in .env}
+      DATABASE_URL: ${DATABASE_URL:-mysql://root:password@db:3306/defaultdb}
+      PROXY_HOST: ${PROXY_HOST:-scraping}
+      PROXY_PORT: ${PROXY_PORT:-4082}
+    depends_on:
+      db:
+        condition: service_healthy
+      scraping:
+        condition: service_started
+    restart: unless-stopped
+
   scraping:
     build:
       context: .
