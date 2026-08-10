@@ -4,14 +4,14 @@ import path from 'path';
 config({ path: path.join(__dirname, '../../../.env') });
 Database.initDatabase();
 
-import { Client, GatewayIntentBits, Message, MessageFlags } from 'discord.js';
+import { Client, Events, GatewayIntentBits, MessageFlags } from 'discord.js';
 import { commandHandlers, deployCommands } from './deployCommand';
 import { connectSSE } from './live';
 
 export const client = new Client({
     intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
 });
-client.once('ready', async () => {
+client.once(Events.ClientReady, async () => {
     console.log(`Logged in as ${client.user?.tag}!`);
     client.application?.commands.set(await deployCommands());
     connectSSE();
