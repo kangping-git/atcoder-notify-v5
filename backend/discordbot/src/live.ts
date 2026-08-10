@@ -1,7 +1,7 @@
 import { EventSource } from 'eventsource';
 import { Database } from './database';
 import { client } from '.';
-import { EmbedBuilder } from 'discord.js';
+import { Channel, EmbedBuilder } from 'discord.js';
 
 export enum SubmissionStatus {
     AC = 'AC',
@@ -175,7 +175,7 @@ async function handleSubmission(rawData: string) {
     }
     await Promise.all(
         servers.map(async (server) => {
-            let channel = client.channels.cache.get(server.ac_notify_channel!);
+            let channel: Channel | null | undefined = client.channels.cache.get(server.ac_notify_channel!);
             if (!channel) {
                 channel = await client.channels.fetch(server.ac_notify_channel!);
             }
