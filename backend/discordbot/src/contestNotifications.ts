@@ -300,17 +300,45 @@ function renderStandingsSvg(
     };
     const performanceMap = estimatePerformances(rows, contestInfo, averagePerformances);
     const rowsByName = new Map(rows.map((row) => [row.UserScreenName.toLowerCase(), row]));
-    const userRows = [...new Set(linkedNames.map((name) => name.trim()).filter(Boolean))].map((name) => {
-        const row = rowsByName.get(name.toLowerCase());
-        const performance = row ? performanceMap.get(name.toLowerCase()) : undefined;
-        return {
-            name,
-            row,
-            performance,
-            newRating: row ? estimateNewRating(row, contestInfo, performance, heuristicHistories.get(name.toLowerCase()) ?? []) : undefined,
-            ratingDelta: row ? estimateRatingDelta(row, contestInfo, performance, heuristicHistories.get(name.toLowerCase()) ?? []) : undefined,
-        };
-    });
+    type UserRow = {
+        name: string;
+        row: typeof rows[number] | undefined;
+        performance: number | undefined;
+        newRating: number | undefined;
+        ratingDelta: number | undefined;
+        serverRank?: number;
+    };
+    const userRows: UserRow[] = [...new Set(linkedNames.map((name) => name.trim()).filter(Boolean))]
+        .map((name) => {
+            const row = rowsByName.get(name.toLowerCase());
+            const performance = row ? performanceMap.get(name.toLowerCase()) : undefined;
+            return {
+                name,
+                row,
+                performance,
+                newRating: row ? estimateNewRating(row, contestInfo, performance, heuristicHistories.get(name.toLowerCase()) ?? []) : undefined,
+                ratingDelta: row ? estimateRatingDelta(row, contestInfo, performance, heuristicHistories.get(name.toLowerCase()) ?? []) : undefined,
+            };
+        })
+        .sort((a, b) => {
+            const rankA = a.row?.Rank && a.row.Rank > 0 ? a.row.Rank : Number.POSITIVE_INFINITY;
+            const rankB = b.row?.Rank && b.row.Rank > 0 ? b.row.Rank : Number.POSITIVE_INFINITY;
+            return rankA - rankB || a.name.localeCompare(b.name);
+        });
+    let rankedUserCount = 0;
+    let previousGlobalRank: number | undefined;
+    let currentServerRank: number | undefined;
+    for (const entry of userRows) {
+        const globalRank = entry.row?.Rank && entry.row.Rank > 0 ? entry.row.Rank : undefined;
+        if (globalRank === undefined) {
+            entry.serverRank = undefined;
+            continue;
+        }
+        rankedUserCount += 1;
+        if (globalRank !== previousGlobalRank) currentServerRank = rankedUserCount;
+        previousGlobalRank = globalRank;
+        entry.serverRank = currentServerRank;
+    }
 
     const difficulties = tasks.map((task) => problemDifficulty(rows, task, models));
     const circleDefinitions: string[] = [];
@@ -336,7 +364,7 @@ function renderStandingsSvg(
     const userCircleInfos = userRows.map((entry) =>
         entry.row ? createCircleInfo(entry.row.OldRating ?? 0) : undefined);
     const problemWidth = 74;
-    const widths = [64, 190, 90, ...tasks.map(() => problemWidth), 115, 100, 95];
+    const widths = [64, 64, 190, 90, ...tasks.map(() => problemWidth), 115, 100, 95];
     const xPositions: number[] = [];
     widths.reduce((x, width) => {
         xPositions.push(x);
@@ -356,16 +384,16 @@ function renderStandingsSvg(
         `<rect x="0" y="${headerHeight - 1}" width="${width}" height="1" fill="#999"/>`,
     ];
 
-    const headers = ['順位', 'ユーザー', 'Score', ...tasks.map((task, index) => `${taskLabel(task, index)}\n${difficulties[index] === undefined ? '—' : `~${difficulties[index]}`}`), 'Perf.', 'NewRating', 'ΔRate'];
+    const headers = ['順位', '鯖順位', 'ユーザー', 'Score', ...tasks.map((task, index) => `${taskLabel(task, index)}\n${difficulties[index] === undefined ? '—' : `~${difficulties[index]}`}`), 'Perf.', 'NewRating', 'ΔRate'];
     headers.forEach((header, index) => {
         const x = xPositions[index] + widths[index] / 2;
         const lines = header.split('\n');
         lines.forEach((line, lineIndex) => {
-            const isDifficulty = index >= 3 && index < 3 + tasks.length && lineIndex === 1;
-            const taskCircle = lineIndex === 0 && index >= 3 ? taskCircleInfos[index - 3] : undefined;
+            const isDifficulty = index >= 4 && index < 4 + tasks.length && lineIndex === 1;
+            const taskCircle = lineIndex === 0 && index >= 4 ? taskCircleInfos[index - 4] : undefined;
             if (taskCircle) parts.push(circleElement(taskCircle, x - 5, headerHeight - 38));
             const textX = taskCircle ? x + 8 : x;
-            parts.push(`<text x="${textX}" y="${headerHeight - 34 + lineIndex * 18}" text-anchor="middle" font-family="Arial, sans-serif" font-size="${isDifficulty ? 12 : 13}" font-weight="bold" fill="${isDifficulty ? ratingColor(difficulties[index - 3] ?? 0) : '#333'}">${escapeXml(line)}</text>`);
+            parts.push(`<text x="${textX}" y="${headerHeight - 34 + lineIndex * 18}" text-anchor="middle" font-family="Arial, sans-serif" font-size="${isDifficulty ? 12 : 13}" font-weight="bold" fill="${isDifficulty ? ratingColor(difficulties[index - 4] ?? 0) : '#333'}">${escapeXml(line)}</text>`);
         });
     });
 
@@ -378,6 +406,7 @@ function renderStandingsSvg(
         const displayPerformance = entry.performance === undefined ? undefined : Math.round(positivizeRating(entry.performance));
         const values = [
             rank,
+            entry.serverRank === undefined ? '—' : String(entry.serverRank),
             entry.name,
             score,
             ...tasks.map((task) => problemCell(row, task)),
@@ -386,16 +415,16 @@ function renderStandingsSvg(
             row ? formatSignedDelta(entry.ratingDelta) : '—',
         ];
         values.forEach((value, index) => {
-            if (index === 1 && userCircleInfos[rowIndex]) {
+            if (index === 2 && userCircleInfos[rowIndex]) {
                 parts.push(circleElement(userCircleInfos[rowIndex]!, xPositions[index] + 16, y + rowHeight / 2));
             }
-            const textX = index === 1 ? xPositions[index] + 28 : xPositions[index] + widths[index] / 2;
-            const anchor = index === 1 ? 'start' : 'middle';
+            const textX = index === 2 ? xPositions[index] + 28 : xPositions[index] + widths[index] / 2;
+            const anchor = index === 2 ? 'start' : 'middle';
             let fill = '#333';
-            if (index === 1 && row?.OldRating !== undefined) fill = ratingColor(row.OldRating);
-            if (index === 3 + tasks.length && displayPerformance !== undefined) fill = ratingColor(displayPerformance);
-            if (index === 4 + tasks.length && entry.newRating !== undefined) fill = ratingColor(entry.newRating);
-            if (index === 5 + tasks.length && entry.ratingDelta !== undefined) fill = entry.ratingDelta > 0 ? '#087f23' : entry.ratingDelta < 0 ? '#c62828' : '#555';
+            if (index === 2 && row?.OldRating !== undefined) fill = ratingColor(row.OldRating);
+            if (index === 4 + tasks.length && displayPerformance !== undefined) fill = ratingColor(displayPerformance);
+            if (index === 5 + tasks.length && entry.newRating !== undefined) fill = ratingColor(entry.newRating);
+            if (index === 6 + tasks.length && entry.ratingDelta !== undefined) fill = entry.ratingDelta > 0 ? '#087f23' : entry.ratingDelta < 0 ? '#c62828' : '#555';
             parts.push(`<text x="${textX}" y="${y + rowHeight / 2 + 1}" text-anchor="${anchor}" dominant-baseline="middle" font-family="Arial, sans-serif" font-size="13" fill="${fill}">${escapeXml(value)}</text>`);
         });
     });
