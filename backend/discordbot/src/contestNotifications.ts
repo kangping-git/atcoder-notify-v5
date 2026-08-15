@@ -13,11 +13,13 @@ import {
     ContestStandingsPayload,
     ContestTask,
     estimateDifficulty,
+    estimateNewRating,
     estimatePerformances,
     estimateRatingDelta,
     formatSignedDelta,
     getTaskResult,
     HeuristicRatingHistory,
+    positivizeRating,
 } from './contestRating';
 
 const JST = 'Asia/Tokyo';
@@ -237,6 +239,14 @@ function problemCell(row: ContestStanding | undefined, task: ContestTask) {
     return `${result.Failure ?? result.Count ?? 0}×`;
 }
 
+function formatScore(score: number | undefined) {
+    if (score === undefined || !Number.isFinite(score)) return '0';
+    const displayScore = score / 100;
+    return Number.isInteger(displayScore)
+        ? String(displayScore)
+        : displayScore.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
+}
+
 function renderStandingsSvg(
     contest: ContestRecord,
     payload: ContestStandingsPayload,
@@ -246,7 +256,14 @@ function renderStandingsSvg(
     heuristicHistories: ReadonlyMap<string, readonly HeuristicRatingHistory[]>,
 ) {
     const tasks = payload.TaskInfo ?? [];
-    const rows = payload.StandingsData ?? [];
+    // During a live contest AtCoder exposes the pre-contest rating as Rating;
+    // after standings are fixed, OldRating is the authoritative field.
+    const rows = (payload.StandingsData ?? []).map((row) => ({
+        ...row,
+        OldRating: payload.Fixed === true
+            ? row.OldRating ?? row.Rating
+            : row.Rating ?? row.OldRating,
+    }));
     const contestInfo = {
         contestType: contest.contestType,
         isHeuristic: contest.isHeuristic,
@@ -265,13 +282,14 @@ function renderStandingsSvg(
             name,
             row,
             performance,
+            newRating: row ? estimateNewRating(row, contestInfo, performance, heuristicHistories.get(name.toLowerCase()) ?? []) : undefined,
             ratingDelta: row ? estimateRatingDelta(row, contestInfo, performance, heuristicHistories.get(name.toLowerCase()) ?? []) : undefined,
         };
     });
 
     const difficulties = tasks.map((task) => problemDifficulty(rows, task, models));
     const problemWidth = 74;
-    const widths = [64, 190, 90, ...tasks.map(() => problemWidth), 115, 95];
+    const widths = [64, 190, 90, ...tasks.map(() => problemWidth), 115, 100, 95];
     const xPositions: number[] = [];
     widths.reduce((x, width) => {
         xPositions.push(x);
@@ -290,7 +308,7 @@ function renderStandingsSvg(
         `<rect x="0" y="${headerHeight - 1}" width="${width}" height="1" fill="#999"/>`,
     ];
 
-    const headers = ['順位', 'ユーザー', 'Score', ...tasks.map((task, index) => `${taskLabel(task, index)}\n${difficulties[index] === undefined ? '—' : `~${difficulties[index]}`}`), 'Perf.', 'ΔRate'];
+    const headers = ['順位', 'ユーザー', 'Score', ...tasks.map((task, index) => `${taskLabel(task, index)}\n${difficulties[index] === undefined ? '—' : `~${difficulties[index]}`}`), 'Perf.', 'NewRating', 'ΔRate'];
     headers.forEach((header, index) => {
         const x = xPositions[index] + widths[index] / 2;
         const lines = header.split('\n');
@@ -305,15 +323,25 @@ function renderStandingsSvg(
         if (rowIndex % 2 === 1) parts.push(`<rect x="0" y="${y}" width="${width}" height="${rowHeight}" fill="#f5f7fa"/>`);
         const row = entry.row;
         const rank = row?.Rank && row.Rank > 0 ? String(row.Rank) : '—';
-        const score = row?.TotalResult?.Score === undefined ? '0' : String(row.TotalResult.Score);
-        const values = [rank, entry.name, score, ...tasks.map((task) => problemCell(row, task)), entry.performance === undefined ? '—' : `~${entry.performance}`, row ? formatSignedDelta(entry.ratingDelta) : '—'];
+        const score = formatScore(row?.TotalResult?.Score);
+        const displayPerformance = entry.performance === undefined ? undefined : Math.round(positivizeRating(entry.performance));
+        const values = [
+            rank,
+            entry.name,
+            score,
+            ...tasks.map((task) => problemCell(row, task)),
+            displayPerformance === undefined ? '—' : `~${displayPerformance}`,
+            entry.newRating === undefined ? '—' : String(entry.newRating),
+            row ? formatSignedDelta(entry.ratingDelta) : '—',
+        ];
         values.forEach((value, index) => {
             const textX = index === 1 ? xPositions[index] + 10 : xPositions[index] + widths[index] / 2;
             const anchor = index === 1 ? 'start' : 'middle';
             let fill = '#333';
             if (index === 1 && row?.OldRating !== undefined) fill = ratingColor(row.OldRating);
-            if (index === 3 + tasks.length && entry.performance !== undefined) fill = ratingColor(entry.performance);
-            if (index === 4 + tasks.length && entry.ratingDelta !== undefined) fill = entry.ratingDelta > 0 ? '#087f23' : entry.ratingDelta < 0 ? '#c62828' : '#555';
+            if (index === 3 + tasks.length && displayPerformance !== undefined) fill = ratingColor(displayPerformance);
+            if (index === 4 + tasks.length && entry.newRating !== undefined) fill = ratingColor(entry.newRating);
+            if (index === 5 + tasks.length && entry.ratingDelta !== undefined) fill = entry.ratingDelta > 0 ? '#087f23' : entry.ratingDelta < 0 ? '#c62828' : '#555';
             parts.push(`<text x="${textX}" y="${y + rowHeight / 2 + 1}" text-anchor="${anchor}" dominant-baseline="middle" font-family="Arial, sans-serif" font-size="13" fill="${fill}">${escapeXml(value)}</text>`);
         });
     });

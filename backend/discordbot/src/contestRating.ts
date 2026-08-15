@@ -27,6 +27,7 @@ export interface ContestStanding {
     Rank?: number;
     UserScreenName: string;
     IsRated?: boolean;
+    Rating?: number;
     OldRating?: number;
     Competitions?: number;
     TotalResult?: {
@@ -40,12 +41,14 @@ export interface ContestStanding {
 }
 
 export interface ContestStandingsPayload {
+    Fixed?: boolean;
     TaskInfo?: ContestTask[];
     StandingsData?: ContestStanding[];
 }
 
 export interface UserContestEstimate {
     performance?: number;
+    newRating?: number;
     ratingDelta?: number;
 }
 
@@ -128,6 +131,12 @@ export function adjustRating(rawRating: number, contests: number): number {
     return Math.floor(Math.max(1, 400 / Math.exp((400 - discountedRating) / 400)));
 }
 
+/** Convert AtCoder's internal (unpositivized) value to the displayed value. */
+export function positivizeRating(rating: number): number {
+    if (rating >= 400) return rating;
+    return 400 * Math.exp((rating - 400) / 400);
+}
+
 /** AtCoderProblems' clipped difficulty used for display. */
 export function clipDifficulty(difficulty: number): number {
     if (difficulty >= 400) return Math.round(difficulty);
@@ -193,7 +202,9 @@ export function estimatePerformances(
     const rankedRows = rows
         .filter((row) =>
             safeNumber(row.Rank) > 0 &&
-            (!contest.isHeuristic || (row.IsRated !== false && safeNumber(row.TotalResult?.Count) > 0)),
+            (contest.isHeuristic
+                ? row.IsRated !== false && safeNumber(row.TotalResult?.Count) > 0
+                : row.IsRated !== false),
         )
         .sort((a, b) => safeNumber(a.Rank) - safeNumber(b.Rank));
     const rawRatings = rankedRows.map((row) => {
@@ -240,11 +251,10 @@ export function estimatePerformances(
         const performance = Math.round(lower);
         for (let index = position; index < groupEnd; index += 1) {
             const row = rankedRows[index];
-            let userPerformance = performance;
-            if (!contest.isHeuristic && safeNumber(row.Competitions) === 0) {
-                userPerformance = Math.round((performance - defaultPerformance) * 1.5 + defaultPerformance);
-            }
-            performanceByUser.set(row.UserScreenName.toLowerCase(), userPerformance);
+            // The newcomer/default APerf is used as an input for the rank
+            // model. It must not be applied a second time to the participant's
+            // own performance when converting performance to rating.
+            performanceByUser.set(row.UserScreenName.toLowerCase(), performance);
         }
         position = groupEnd;
     }
@@ -298,15 +308,20 @@ export function calculateHeuristicRating(history: HeuristicRatingHistory[]): num
 }
 
 /** Estimate the displayed rating after this contest from old rating/count. */
-export function estimateRatingDelta(
+export function estimateNewRating(
     row: ContestStanding,
     contest: ContestRatingInfo,
     performance: number | undefined,
     heuristicHistory: readonly HeuristicRatingHistory[] = [],
 ): number | undefined {
-    if (row.IsRated === false || performance === undefined) return 0;
+    if (row.IsRated === false || performance === undefined) return undefined;
     if (contest.isHeuristic) {
-        if (safeNumber(row.TotalResult?.Count) <= 0) return 0;
+        if (safeNumber(row.TotalResult?.Count) <= 0) return undefined;
+        // AHC's displayed rating cannot be reconstructed from OldRating alone;
+        // avoid showing a large fake delta if the local history has not synced.
+        if (heuristicHistory.length === 0 && safeNumber(row.OldRating) > 0 && safeNumber(row.Competitions) > 0) {
+            return undefined;
+        }
         const currentEndTime = contest.endTime ?? contest.startTime ?? new Date();
         const currentHistory: HeuristicRatingHistory = {
             performance,
@@ -315,30 +330,39 @@ export function estimateRatingDelta(
             duration: contest.duration,
         };
         const newRating = Math.round(calculateHeuristicRating([...heuristicHistory, currentHistory]));
-        return newRating - Math.max(0, safeNumber(row.OldRating));
+        return newRating;
     }
-    if (contest.ratingRangeEnd <= 0) return 0;
+    if (contest.ratingRangeEnd <= 0) return undefined;
 
     const { ratingBound } = getContestRatingParameters(contest);
     const previousContests = Math.max(0, Math.floor(safeNumber(row.Competitions)));
     const roundedPerformance = Math.min(performance, ratingBound);
     const oldRating = Math.max(0, safeNumber(row.OldRating));
 
-    let rawRating: number;
     if (previousContests === 0 || oldRating <= 0) {
-        rawRating = roundedPerformance;
-    } else {
-        const oldRawRating = inverseAdjustRating(oldRating, previousContests);
-        if (!Number.isFinite(oldRawRating)) return undefined;
-        const oldWeight = (1 - 0.9 ** previousContests) / 0.1;
-        const oldAverage = 2 ** (oldRawRating / 800);
-        const nextAverage =
-            (oldAverage * oldWeight * 0.9 + 2 ** (roundedPerformance / 800)) /
-            (oldWeight * 0.9 + 1);
-        rawRating = Math.log2(nextAverage) * 800;
+        return adjustRating(roundedPerformance, 1);
     }
 
-    return adjustRating(rawRating, previousContests + 1) - oldRating;
+    const oldRawRating = inverseAdjustRating(oldRating, previousContests);
+    if (!Number.isFinite(oldRawRating)) return undefined;
+    const oldWeight = 9 * (1 - 0.9 ** previousContests);
+    const rawRating = Math.log2(
+        (oldWeight * 2 ** (oldRawRating / 800) + 2 ** (roundedPerformance / 800)) /
+        (oldWeight + 1),
+    ) * 800;
+    return adjustRating(rawRating, previousContests + 1);
+}
+
+export function estimateRatingDelta(
+    row: ContestStanding,
+    contest: ContestRatingInfo,
+    performance: number | undefined,
+    heuristicHistory: readonly HeuristicRatingHistory[] = [],
+): number | undefined {
+    if (row.IsRated === false || (!contest.isHeuristic && contest.ratingRangeEnd <= 0)) return 0;
+    const newRating = estimateNewRating(row, contest, performance, heuristicHistory);
+    if (newRating === undefined) return undefined;
+    return newRating - Math.max(0, safeNumber(row.OldRating));
 }
 
 export function formatSignedDelta(delta: number | undefined): string {

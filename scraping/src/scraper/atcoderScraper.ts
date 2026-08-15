@@ -62,10 +62,10 @@ export namespace AtCoderScraper {
         }
         refreshingContestAndTasks = true;
         try {
-        await ScrapingState.run('contest_task_refresh', undefined, async () => {
-            await ScraperContest.CrawlAllContest();
-            await rebuildTasksTable();
-        });
+            await ScrapingState.run('contest_task_refresh', undefined, async () => {
+                await ScraperContest.CrawlAllContest();
+                await rebuildTasksTable();
+            });
         } finally {
             refreshingContestAndTasks = false;
         }

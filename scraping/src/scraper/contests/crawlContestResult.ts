@@ -54,7 +54,9 @@ export namespace ScraperContestResult {
             await ScrapingState.set(`contest_result:${contestId}`, 'error', { contestId }, 'Contest not found in database');
             return;
         }
-        if (contestData.ratingRangeEnd <= 0) {
+        // AHC uses a separate heuristic rating system and is represented with
+        // a negative algorithmic rating range in the contest table.
+        if (contestData.ratingRangeEnd <= 0 && !contestData.isHeuristic) {
             AtCoderScraper.logger.warn(`Contest ${contestId} is not rated, skipping result crawl.`);
             await ScrapingState.set(`contest_result:${contestId}`, 'skipped', { contestId, reason: 'not_rated' });
             return;
