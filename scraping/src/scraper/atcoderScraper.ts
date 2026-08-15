@@ -13,6 +13,7 @@ export namespace AtCoderScraper {
     let sessionId: string | null = null;
     export let logger: Logger;
     let crawlingContestResults = false;
+    let refreshingContestAndTasks = false;
 
     export async function initAtCoderScraper() {
         logger = Main.getLogger().child('AtCoderScraper');
@@ -34,6 +35,11 @@ export namespace AtCoderScraper {
         logger.info('Starting AtCoder scraper cron jobs...');
         cron.schedule('*/30 * * * * *', runEvery30Seconds, { timezone: 'Asia/Tokyo' });
         cron.schedule('*/1 * * * *', runEveryMinute, { timezone: 'Asia/Tokyo' });
+        cron.schedule('*/5 * * * *', () => {
+            refreshContestAndTaskTables().catch((error) => {
+                logger.error('Scheduled contest/task refresh failed.', { error });
+            });
+        }, { timezone: 'Asia/Tokyo' });
         cron.schedule('0 7 * * *', runDaily, { timezone: 'Asia/Tokyo' });
         logger.info('AtCoder scraper cron jobs started successfully');
         refreshContestAndTaskTables()
@@ -50,10 +56,19 @@ export namespace AtCoderScraper {
     }
 
     async function refreshContestAndTaskTables() {
+        if (refreshingContestAndTasks) {
+            logger.info('Skipping contest/task refresh because another refresh is already running.');
+            return;
+        }
+        refreshingContestAndTasks = true;
+        try {
         await ScrapingState.run('contest_task_refresh', undefined, async () => {
             await ScraperContest.CrawlAllContest();
             await rebuildTasksTable();
         });
+        } finally {
+            refreshingContestAndTasks = false;
+        }
     }
 
     export async function CrawlContestResults(isNull = false) {

@@ -7,6 +7,7 @@ Database.initDatabase();
 import { Client, Events, GatewayIntentBits, MessageFlags } from 'discord.js';
 import { commandHandlers, deployCommands } from './deployCommand';
 import { connectSSE } from './live';
+import { startContestNotifications } from './contestNotifications';
 
 export const client = new Client({
     intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
@@ -15,6 +16,7 @@ client.once(Events.ClientReady, async () => {
     console.log(`Logged in as ${client.user?.tag}!`);
     client.application?.commands.set(await deployCommands());
     connectSSE();
+    startContestNotifications(client);
 });
 
 client.on('interactionCreate', async (interaction) => {
