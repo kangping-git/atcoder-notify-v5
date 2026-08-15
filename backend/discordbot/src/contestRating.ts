@@ -17,6 +17,8 @@ export interface ContestTask {
 export interface ContestTaskResult {
     Count?: number;
     Failure?: number;
+    Penalty?: number;
+    Elapsed?: number;
     Score?: number;
     Status?: number;
     Pending?: boolean;

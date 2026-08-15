@@ -80,6 +80,27 @@ function ratingColor(rating: number) {
     return '#666666';
 }
 
+const ATCODER_CIRCLE_COLORS = [
+    '#808080', // Grey
+    '#804000', // Brown
+    '#008000', // Green
+    '#00c0c0', // Cyan
+    '#0000ff', // Blue
+    '#c0c000', // Yellow
+    '#ff8000', // Orange
+    '#ff0000', // Red
+];
+
+function circleColor(rating: number) {
+    const index = Math.min(Math.max(Math.floor(rating / 400), 0), ATCODER_CIRCLE_COLORS.length - 1);
+    return ATCODER_CIRCLE_COLORS[index];
+}
+
+function circleFillRatio(rating: number) {
+    if (rating >= 3200) return 1;
+    return Math.max(0, Math.min(1, (rating % 400) / 400));
+}
+
 function formatDiscordTime(value: Date) {
     return `<t:${Math.floor(value.getTime() / 1000)}:f>`;
 }
@@ -235,7 +256,11 @@ function problemDifficulty(
 function problemCell(row: ContestStanding | undefined, task: ContestTask) {
     const result = row ? getTaskResult(row, task) : undefined;
     if (!result || (result.Count ?? 0) === 0) return '-';
-    if (result.Status === 1 || (result.Score ?? 0) > 0) return 'AC';
+    if (result.Status === 1 || (result.Score ?? 0) > 0) {
+        const score = formatScore(result.Score);
+        const penalty = result.Penalty === undefined ? '—' : String(result.Penalty);
+        return `${score} / ${penalty}`;
+    }
     return `${result.Failure ?? result.Count ?? 0}×`;
 }
 
@@ -288,6 +313,28 @@ function renderStandingsSvg(
     });
 
     const difficulties = tasks.map((task) => problemDifficulty(rows, task, models));
+    const circleDefinitions: string[] = [];
+    let circleSequence = 0;
+    const createCircleInfo = (rating: number) => {
+        const id = `atcoder-circle-gradient-${circleSequence++}`;
+        const color = circleColor(rating);
+        const fillPercent = circleFillRatio(rating) * 100;
+        circleDefinitions.push(
+            `<linearGradient id="${id}" x1="0%" y1="100%" x2="0%" y2="0%">` +
+            `<stop offset="0%" stop-color="${color}"/>` +
+            `<stop offset="${fillPercent}%" stop-color="${color}"/>` +
+            `<stop offset="${fillPercent}%" stop-color="${color}" stop-opacity="0"/>` +
+            `<stop offset="100%" stop-color="${color}" stop-opacity="0"/>` +
+            '</linearGradient>',
+        );
+        return { id, color };
+    };
+    const circleElement = (info: { id: string; color: string }, cx: number, cy: number, radius = 6) =>
+        `<circle cx="${cx}" cy="${cy}" r="${radius}" fill="url(#${info.id})" stroke="${info.color}" stroke-width="1"/>`;
+    const taskCircleInfos = difficulties.map((difficulty) =>
+        difficulty === undefined ? undefined : createCircleInfo(difficulty));
+    const userCircleInfos = userRows.map((entry) =>
+        entry.row ? createCircleInfo(entry.row.OldRating ?? 0) : undefined);
     const problemWidth = 74;
     const widths = [64, 190, 90, ...tasks.map(() => problemWidth), 115, 100, 95];
     const xPositions: number[] = [];
@@ -301,6 +348,7 @@ function renderStandingsSvg(
     const height = Math.max(180, headerHeight + Math.max(1, userRows.length) * rowHeight + 16);
     const parts: string[] = [
         `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
+        `<defs>${circleDefinitions.join('')}</defs>`,
         '<rect width="100%" height="100%" fill="#ffffff"/>',
         `<text x="18" y="26" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#222">${escapeXml(contest.title)}</text>`,
         `<text x="18" y="49" font-family="Arial, sans-serif" font-size="13" fill="#555">暫定順位（登録ユーザー） / 1分ごと更新 / ${escapeXml(jstDateText(new Date()))}</text>`,
@@ -314,7 +362,10 @@ function renderStandingsSvg(
         const lines = header.split('\n');
         lines.forEach((line, lineIndex) => {
             const isDifficulty = index >= 3 && index < 3 + tasks.length && lineIndex === 1;
-            parts.push(`<text x="${x}" y="${headerHeight - 34 + lineIndex * 18}" text-anchor="middle" font-family="Arial, sans-serif" font-size="${isDifficulty ? 12 : 13}" font-weight="bold" fill="${isDifficulty ? ratingColor(difficulties[index - 3] ?? 0) : '#333'}">${escapeXml(line)}</text>`);
+            const taskCircle = lineIndex === 0 && index >= 3 ? taskCircleInfos[index - 3] : undefined;
+            if (taskCircle) parts.push(circleElement(taskCircle, x - 5, headerHeight - 38));
+            const textX = taskCircle ? x + 8 : x;
+            parts.push(`<text x="${textX}" y="${headerHeight - 34 + lineIndex * 18}" text-anchor="middle" font-family="Arial, sans-serif" font-size="${isDifficulty ? 12 : 13}" font-weight="bold" fill="${isDifficulty ? ratingColor(difficulties[index - 3] ?? 0) : '#333'}">${escapeXml(line)}</text>`);
         });
     });
 
@@ -335,7 +386,10 @@ function renderStandingsSvg(
             row ? formatSignedDelta(entry.ratingDelta) : '—',
         ];
         values.forEach((value, index) => {
-            const textX = index === 1 ? xPositions[index] + 10 : xPositions[index] + widths[index] / 2;
+            if (index === 1 && userCircleInfos[rowIndex]) {
+                parts.push(circleElement(userCircleInfos[rowIndex]!, xPositions[index] + 16, y + rowHeight / 2));
+            }
+            const textX = index === 1 ? xPositions[index] + 28 : xPositions[index] + widths[index] / 2;
             const anchor = index === 1 ? 'start' : 'middle';
             let fill = '#333';
             if (index === 1 && row?.OldRating !== undefined) fill = ratingColor(row.OldRating);
